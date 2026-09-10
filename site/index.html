@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foldy</title>
+<meta name="description" content="Your desktop bends as you close the lid. The fluid fold from iPhone Duo, for the MacBook you already have. Free and open source.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Foldy">
+<meta property="og:title" content="Foldy">
+<meta property="og:description" content="Your desktop bends as you close the lid. The fluid fold from iPhone Duo, for the MacBook you already have.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23111' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 16V7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2.5'/%3E%3Cpath d='M2.5 16h15'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #f5f5f5;
+    --card: #ffffff;
+    --ink: #111111;
+    --muted: #6f6f6f;
+    --line: #efefef;
+    --accent: #0a84ff;
+    --accent-ink: #ffffff;
+    --bezel: #121212;
+    --deck: #858585;
+    --deck-lip: rgba(0, 0, 0, .35);
+    --lid-back: #9a9aa0;
+    --glow: rgba(0, 0, 0, .14);
+    --track: rgba(17, 17, 17, .1);
+    --chip: rgba(17, 17, 17, .05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f0f11;
+      --card: #1a1a1e;
+      --ink: #f2f2f4;
+      --muted: #9a9aa2;
+      --line: #2a2a2f;
+      --accent: #2997ff;
+      --bezel: #050506;
+      --deck: #66666c;
+      --deck-lip: rgba(0, 0, 0, .5);
+      --lid-back: #55555b;
+      --glow: rgba(0, 0, 0, .55);
+      --track: rgba(255, 255, 255, .14);
+      --chip: rgba(255, 255, 255, .07);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f0f11;
+    --card: #1a1a1e;
+    --ink: #f2f2f4;
+    --muted: #9a9aa2;
+    --line: #2a2a2f;
+    --accent: #2997ff;
+    --bezel: #050506;
+    --deck: #66666c;
+    --deck-lip: rgba(0, 0, 0, .5);
+    --lid-back: #55555b;
+    --glow: rgba(0, 0, 0, .55);
+    --track: rgba(255, 255, 255, .14);
+    --chip: rgba(255, 255, 255, .07);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: auto; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, system-ui, sans-serif;
+    font-feature-settings: "cv11", "ss01";
+    font-weight: 500;
+    font-size: 15px;
+    line-height: 1.5;
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+
+  .stage { max-width: 640px; margin: 0 auto; padding: 128px 24px 64px; }
+
+  /* Top bar */
+  .topbar { position: absolute; left: 32px; top: 28px; z-index: 5; }
+  .brand { display: inline-flex; align-items: center; gap: 12px; }
+  .brand .os { color: var(--muted); font-size: 13px; }
+  .wordmark { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; letter-spacing: -0.02em; }
+  .wordmark svg { width: 20px; height: 20px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 28px; padding: 0 12px; margin-left: 4px;
+    border-radius: 999px; background: var(--card); color: var(--ink);
+    text-decoration: none; font-size: 13px; letter-spacing: -0.01em;
+    transition: transform .15s ease;
+  }
+  .pill:hover { transform: translateY(-1px); }
+  .pill:focus-visible, .button:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* Bend counter, top right */
+  .bend-counter {
+    position: fixed; top: 28px; right: 32px; z-index: 20;
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 28px; padding: 0 12px; margin: 0;
+    border-radius: 999px; background: var(--card); color: var(--ink);
+    font-size: 13px; letter-spacing: -0.01em; pointer-events: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .bend-counter::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #78907b; margin-right: 3px; }
+  @media (max-width: 900px) { .bend-counter { top: auto; bottom: 16px; right: 16px; } }
+
+  /* Intro */
+  .intro { margin-bottom: 32px; }
+  h1 { text-wrap: balance; font-size: 40px; line-height: 1.1; letter-spacing: -0.035em; font-weight: 500; margin: 0 0 16px; }
+  .lede { font-size: 19px; line-height: 1.4; letter-spacing: -0.02em; color: var(--muted); margin: 0; max-width: 34ch; }
+  .actions { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-bottom: 80px; }
+  .purchase-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .button {
+    display: inline-flex; align-items: center; gap: 10px;
+    height: 40px; padding: 0 6px 0 18px; border-radius: 999px;
+    background: var(--ink); color: var(--bg); text-decoration: none; letter-spacing: -0.015em;
+    transition: transform .15s ease, opacity .15s ease;
+  }
+  .button .amount {
+    display: inline-flex; align-items: center; height: 28px; padding: 0 10px;
+    border-radius: 999px; background: rgba(255,255,255,.14); font-size: 13px; letter-spacing: -0.01em;
+  }
+  .button:hover { opacity: .88; }
+  .button:active { transform: scale(.98); }
+  .note { margin: 0; color: var(--muted); font-size: 13px; letter-spacing: -0.005em; max-width: 52ch; }
+  .note a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line); }
+  .note a:hover { border-color: var(--ink); }
+  .note code { font: 12.5px/1 ui-monospace, "SF Mono", Menlo, monospace; background: var(--card); padding: 3px 7px; border-radius: 6px; }
+
+  /* Figures */
+  .figure { width: min(880px, calc(100vw - 48px)); margin: 0 0 56px 50%; transform: translateX(-50%); padding: 0; }
+  .caption { margin: 20px auto 0; max-width: 44ch; text-wrap: balance; text-align: center; color: var(--muted); font-size: 13px; letter-spacing: -0.005em; }
+  .shot { margin: 0 0 56px; padding: 0; }
+  .shot img {
+    display: block; width: min(643px, 100%); height: auto; margin: 0 auto; border-radius: 12px;
+    filter: drop-shadow(0 24px 48px var(--glow)) drop-shadow(0 2px 6px rgba(0,0,0,.08));
+  }
+
+  /* MacBook, sized with container units so bezel, notch and deck keep their ratio. */
+  .mac { width: 100%; max-width: 880px; margin: 0 auto; container-type: inline-size; }
+  .lid {
+    position: relative; margin: 0 3.81cqw; aspect-ratio: 1.54;
+    background: var(--bezel); border-radius: 4.83cqw 4.83cqw 0 0; overflow: hidden;
+  }
+  .screen { position: absolute; inset: 1.5cqw 1.5cqw 2.2cqw; border-radius: 3.4cqw 3.4cqw 0 0; overflow: hidden; background: #4c5a70; }
+  .screen canvas, .screen .fallback { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .screen .fallback { transform-origin: 50% 100%; }
+  .screen.gl .fallback { display: none; }
+  .notch { position: absolute; top: 1.5cqw; left: 50%; width: 22.06cqw; aspect-ratio: 64 / 9; transform: translateX(-50%); color: var(--bezel); }
+  .notch svg { display: block; width: 100%; height: 100%; }
+  .deck { position: relative; height: 3.1cqw; background: var(--deck); border-radius: 0 0 1.03cqw 1.03cqw; }
+  .lip { position: absolute; top: 0; left: 50%; width: 24.8cqw; height: 1.21cqw; transform: translateX(-50%); border-radius: 0 0 1.38cqw 1.38cqw; background: var(--deck-lip); }
+
+  /* Cards */
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .card { background: var(--card); border-radius: 20px; }
+  section.card { padding: 24px 24px 12px; }
+  h2 { font-size: 13px; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+  dl { margin: 0 -24px; padding: 0; }
+  .row { display: grid; grid-template-columns: 140px 1fr; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  dt { margin: 0; letter-spacing: -0.015em; }
+  dd { margin: 0; color: var(--muted); }
+
+  footer {
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    color: var(--muted); font-size: 13px; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--line);
+  }
+  footer a { color: inherit; text-decoration: none; }
+  footer .links { display: flex; gap: 20px; }
+  footer a:hover { color: var(--ink); }
+
+  /* Take a closer look: the iPhone Duo interaction, for a lid. */
+  .closer { width: min(1040px, calc(100vw - 48px)); margin: 24px 0 72px 50%; transform: translateX(-50%); }
+  .closer h2 { margin-bottom: 20px; text-align: center; }
+  .closer-grid { display: grid; grid-template-columns: 1fr; gap: 28px; align-items: start; }
+  @media (min-width: 900px) { .closer-grid { grid-template-columns: minmax(300px, 380px) 1fr; gap: 40px; align-items: center; } }
+  .closer-copy { display: flex; flex-direction: column; gap: 12px; }
+  .state-card { background: var(--card); border-radius: 22px; padding: 22px 24px; }
+  .state-card p { margin: 0; font-size: 15.5px; line-height: 1.45; }
+  .state-card p b { font-weight: 600; }
+  .state-card .hint { display: block; margin-top: 14px; color: var(--muted); font-size: 12.5px; }
+
+  .fold-slider { position: relative; margin-top: 10px; height: 44px; display: flex; align-items: center; }
+  .fold-slider input {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 44px; margin: 0; background: transparent; cursor: pointer;
+  }
+  .fold-slider input:focus-visible { outline: none; }
+  .fold-slider input::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; background: var(--track); }
+  .fold-slider input::-moz-range-track { height: 8px; border-radius: 999px; background: var(--track); }
+  .fold-slider input::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 44px; height: 44px; margin-top: -18px; border: 0; border-radius: 50%;
+    background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 7l-4 5 4 5M15 7l4 5-4 5'/%3E%3C/svg%3E") center / 22px no-repeat;
+    box-shadow: 0 2px 8px rgba(0,0,0,.22); transition: transform .15s ease;
+  }
+  .fold-slider input::-moz-range-thumb {
+    width: 44px; height: 44px; border: 0; border-radius: 50%;
+    background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 7l-4 5 4 5M15 7l4 5-4 5'/%3E%3C/svg%3E") center / 22px no-repeat;
+    box-shadow: 0 2px 8px rgba(0,0,0,.22);
+  }
+  .fold-slider input:active::-webkit-slider-thumb { transform: scale(1.08); }
+  .fold-slider input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px var(--bg), 0 0 0 6px var(--accent); }
+  .angle-readout { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+
+  .chips { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 12px; height: 48px; padding: 0 22px 0 18px;
+    border: 0; border-radius: 999px; background: var(--card); color: var(--ink);
+    font: inherit; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; cursor: pointer;
+    transition: transform .15s ease, background .2s ease;
+  }
+  .chip:hover { transform: translateY(-1px); }
+  .chip svg { width: 22px; height: 22px; flex-shrink: 0; }
+  .chip .on { display: none; }
+  .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .chip[aria-pressed="true"] .off { display: none; }
+  .chip[aria-pressed="true"] .on { display: block; }
+
+  /* The 3D MacBook: a lid that swings on its hinge over a flat deck. */
+  .scene { perspective: 1400px; perspective-origin: 50% 38%; width: 100%; aspect-ratio: 1.3; position: relative; }
+  .rig { position: absolute; left: 50%; top: 50%; width: 76%; transform-style: preserve-3d; transform: translate(-50%, -82%) rotateX(20deg); }
+  .rig, .rig * { transform-style: preserve-3d; }
+  .lid3d { position: relative; width: 100%; aspect-ratio: 1.63 / 1.1; transform-origin: 50% 100%; will-change: transform; }
+  .lid3d .face { position: absolute; inset: 0; border-radius: 6.5% / 9.6%; backface-visibility: hidden; }
+  .lid3d .front { background: var(--bezel); overflow: hidden; }
+  .lid3d .front .panel { position: absolute; left: 2.76%; right: 2.76%; top: 4.1%; bottom: 5%; border-radius: 3.5% / 5.4%; overflow: hidden; background: #4c5a70; }
+  .lid3d .front .panel canvas, .lid3d .front .panel .fallback { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .lid3d .front .panel.gl .fallback { display: none; }
+  .lid3d .front .notch3d { position: absolute; top: 0; left: 50%; width: 16.5%; height: 8.2%; transform: translateX(-50%); background: var(--bezel); border-radius: 0 0 14px 14px; }
+  .lid3d .back { background: linear-gradient(180deg, var(--lid-back), color-mix(in srgb, var(--lid-back) 78%, black)); transform: rotateY(180deg) translateZ(3px); }
+  .lid3d .back::after { content: ''; position: absolute; left: 50%; top: 50%; width: 14%; aspect-ratio: 1; transform: translate(-50%, -50%) scaleX(-1); border-radius: 22%; background: rgba(255,255,255,.18); }
+  .deck3d {
+    position: absolute; left: 0; right: 0; top: 100%; height: 0; padding-top: 68%;
+    transform-origin: 50% 0; transform: rotateX(-90deg); border-radius: 2.2%; background: var(--deck);
+    backface-visibility: visible;
+  }
+  .deck3d::before { content: ''; position: absolute; left: 50%; bottom: 0; width: 24%; height: 3.2%; transform: translateX(-50%); border-radius: 12px 12px 0 0; background: var(--deck-lip); }
+  .deck3d::after { content: ''; position: absolute; inset: -10% -14% -30% -14%; z-index: -1; border-radius: 50%; background: radial-gradient(closest-side, var(--glow), transparent 75%); transform: translateZ(-1px); }
+  .rig .hinge { position: absolute; left: 2%; right: 2%; top: calc(100% - 4px); height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--bezel) 60%, var(--deck)); transform: translateZ(-2px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pill, .button, .chip, .fold-slider input::-webkit-slider-thumb { transition: none; }
+  }
+  @media (max-width: 520px) {
+    .topbar { left: 24px; top: 24px; }
+    .brand { flex-wrap: wrap; gap: 8px 12px; }
+    .pill { margin-left: 0; }
+    .stage { padding-top: 96px; }
+    h1 { font-size: 32px; }
+    .lede { font-size: 17px; }
+    .row { grid-template-columns: 1fr; gap: 4px; }
+    .chip { height: 44px; font-size: 16px; }
+    .closer { width: calc(100vw - 32px); }
+  }
+</style>
+</head>
+<body>
+<main class="stage">
+  <p class="bend-counter" id="bendCounter" title="Full bends you have made on this page. Scroll back up and bend again."><strong id="bendTotal">0</strong>&nbsp;bends this visit</p>
+
+  <div class="topbar">
+    <div class="brand">
+      <a class="wordmark" href="#">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 16V7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 16h15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Foldy
+      </a>
+      <span class="os">macOS</span>
+      <a class="pill" href="https://github.com/alexey1312/foldy">Open source<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6h7M6.5 3 9.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+  </div>
+
+  <div class="intro">
+    <h1>Your desktop bends as you close the lid.</h1>
+    <p class="lede">The fluid fold from iPhone Duo, for the lid you already have. Your desktop tilts, blurs and settles as it comes down.</p>
+  </div>
+
+  <div class="actions">
+    <div class="purchase-row">
+      <a class="button" href="https://github.com/alexey1312/foldy/releases">Download Foldy<span class="amount">Free</span></a>
+      <p class="note">Or build it yourself: <code>git clone</code>, then <code>make app</code>. One menu bar icon, no account, no license key.</p>
+    </div>
+    <p class="note">Needs an Apple silicon MacBook with a lid angle sensor and macOS 14 or later. Every frame is drawn with Metal on your Mac and never leaves it.</p>
+  </div>
+
+  <figure class="figure">
+    <div class="mac">
+      <div class="lid">
+        <div class="screen" id="scrollScreen">
+          <canvas id="scrollCanvas" aria-hidden="true"></canvas>
+          <div class="fallback" id="scrollFallback"></div>
+        </div>
+        <div class="notch"><svg viewBox="0 0 64 9" preserveAspectRatio="none"><path d="M0 0Q2 0 2 2V5Q2 9 6 9H58Q62 9 62 5V2Q62 0 64 0Z" fill="currentColor"/></svg></div>
+      </div>
+      <div class="deck"><div class="lip"></div></div>
+    </div>
+    <figcaption class="caption">Scroll. The screen bends, blurs and shades, just like when your lid comes down.</figcaption>
+  </figure>
+
+  <section class="closer" aria-labelledby="closerTitle">
+    <h2 id="closerTitle">Take a closer look</h2>
+    <div class="closer-grid">
+      <div class="closer-copy">
+        <div class="state-card">
+          <p><b id="stateTitle">Foldable desktop.</b> <span id="stateBlurb">Offers the fluid fold of iPhone Duo in a Mac you already own. The base of the desktop stays put; the top folds away, blurs and falls into shadow.</span></p>
+          <span class="hint" id="dragHint">Drag below to open and close</span>
+          <div class="fold-slider">
+            <input type="range" id="lidRange" min="0" max="135" step="0.5" value="135" aria-label="Lid angle in degrees">
+          </div>
+          <div class="angle-readout"><span id="angleReadout">135°</span> · lid angle</div>
+        </div>
+        <div class="chips" id="chips" role="group" aria-label="Lid positions and styles">
+          <button class="chip" type="button" data-chip="open"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Open</button>
+          <button class="chip" type="button" data-chip="halfway"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Halfway</button>
+          <button class="chip" type="button" data-chip="closed"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Closed</button>
+          <button class="chip" type="button" data-chip="silk"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Silk</button>
+          <button class="chip" type="button" data-chip="shade"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Shade</button>
+          <button class="chip" type="button" data-chip="frost"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Frost</button>
+        </div>
+      </div>
+      <div class="scene" aria-hidden="true">
+        <div class="rig">
+          <div class="lid3d" id="lid3d">
+            <div class="face front">
+              <div class="panel" id="lidPanel">
+                <canvas id="lidCanvas"></canvas>
+                <div class="fallback" id="lidFallback"></div>
+              </div>
+              <div class="notch3d"></div>
+            </div>
+            <div class="face back"></div>
+          </div>
+          <div class="hinge"></div>
+          <div class="deck3d"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <figure class="shot">
+    <img src="settings.png" width="900" height="728" alt="Foldy's Appearance settings: a live MacBook preview, a drag-to-open slider, Silk, Shade and Frost styles, and perspective, blur, shadow and bend controls." loading="lazy">
+    <figcaption class="caption">Three styles. Perspective, blur, shadow and bend on sliders. Follow the lid, or drag the angle yourself.</figcaption>
+  </figure>
+
+  <div class="stack">
+    <section class="card">
+      <h2>How it works</h2>
+      <dl>
+        <div class="row"><dt>Lid sensor</dt><dd>Reads the hinge angle from the Mac's own sensor over HID. It listens for reports and polls only while the lid is moving; no accessibility hacks.</dd></div>
+        <div class="row"><dt>Live desktop</dt><dd>Captures the screen with ScreenCaptureKit and renders the tilt with Metal, so windows and wallpaper move together. The overlay excludes itself from the capture.</dd></div>
+        <div class="row"><dt>Three styles</dt><dd>Silk, Shade and Frost. Tune perspective, blur, shadow and bend, or set the angle where it clears.</dd></div>
+        <div class="row"><dt>Bend</dt><dd>Not just a tilt: the sheet curls from the hinge, so the base stays put and only the upper part folds back, like a page. The demo above runs the same shader in WebGL.</dd></div>
+        <div class="row"><dt>Sound</dt><dd>A soft click when the lid opens and the desktop clears. Synthesised on the spot; switch it off in General.</dd></div>
+        <div class="row"><dt>Menu bar</dt><dd>Lives quietly in the menu bar. Pause with a click or Esc, or run the fold on demand with Try It Now.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>Requirements</h2>
+      <dl>
+        <div class="row"><dt>macOS</dt><dd>14 Sonoma or later.</dd></div>
+        <div class="row"><dt>Hardware</dt><dd>Apple silicon MacBook with a lid angle sensor. The 2019 16-inch MacBook Pro has one too.</dd></div>
+        <div class="row"><dt>Permissions</dt><dd>Screen Recording, so the desktop can be captured. Without it Foldy folds a sample wallpaper instead.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>Private by design</h2>
+      <dl>
+        <div class="row"><dt>On device</dt><dd>Frames go from the capture straight to the GPU. Nothing is recorded, saved or uploaded; the app has no network code at all.</dd></div>
+        <div class="row"><dt>No account</dt><dd>Free and open source under the MIT license. Download the app or build it from source; there is no key to enter and no email to give.</dd></div>
+      </dl>
+    </section>
+
+    <footer>
+      <span>© <span id="year"></span> Foldy</span>
+      <nav class="links"><a href="https://github.com/alexey1312/foldy">GitHub</a><a href="https://github.com/alexey1312/foldy/blob/main/README.md">Credits</a><a href="https://www.apple.com/iphone-duo/">iPhone Duo</a></nav>
+    </footer>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  // ---------------------------------------------------------------------------
+  // The fold, as the app renders it. The lid angle maps to fold progress the way
+  // the app's FoldCurve does: flat above 100°, fully folded at 20°, eased between.
+  // ---------------------------------------------------------------------------
+  var CURVE = { clear: 100, folded: 20 };
+  var STYLES = {
+    silk:  { perspective: 1.0, blur: 0.65, shadow: 0.5, bend: 0.35, frost: 0.0 },
+    shade: { perspective: 0.9, blur: 0.45, shadow: 1.0, bend: 0.25, frost: 0.0 },
+    frost: { perspective: 0.8, blur: 1.0,  shadow: 0.3, bend: 0.45, frost: 0.7 }
+  };
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function clamp01(t) { return Math.min(Math.max(t, 0), 1); }
+  function smooth(t) { t = clamp01(t); return t * t * (3 - 2 * t); }
+  function progressFor(angle) { return smooth((CURVE.clear - angle) / (CURVE.clear - CURVE.folded)); }
+  function angleFor(fraction) { return CURVE.clear - clamp01(fraction) * (CURVE.clear - CURVE.folded); }
+
+  // The sample desktop: a lock screen over dunes, the same picture the app draws.
+  function drawWallpaper(w, h) {
+    var c = document.createElement('canvas'); c.width = w; c.height = h;
+    var g = c.getContext('2d');
+    var sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, '#4c5a70'); sky.addColorStop(1, '#c2cbd8');
+    g.fillStyle = sky; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(239,245,255,.85)'; g.beginPath(); g.arc(w * .76, h * .27, w * .039, 0, Math.PI * 2); g.fill();
+    var far = g.createLinearGradient(w, h * .5, 0, h); far.addColorStop(0, '#e0e5ec'); far.addColorStop(1, '#85919f');
+    g.fillStyle = far; g.beginPath(); g.moveTo(0, h * .64);
+    g.bezierCurveTo(w * .14, h * .72, w * .43, h * .55, w * .68, h * .615);
+    g.bezierCurveTo(w * .85, h * .66, w * .93, h * .53, w, h * .53);
+    g.lineTo(w, h); g.lineTo(0, h); g.closePath(); g.fill();
+    var near = g.createLinearGradient(0, h * .6, w * .5, h); near.addColorStop(0, '#ccd4de'); near.addColorStop(1, '#75879a');
+    g.fillStyle = near; g.beginPath(); g.moveTo(0, h * .72);
+    g.bezierCurveTo(w * .14, h * .61, w * .36, h * .62, w * .54, h * .76);
+    g.bezierCurveTo(w * .72, h * .9, w * .86, h * .88, w, h * .84);
+    g.lineTo(w, h); g.lineTo(0, h); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+    g.font = '500 ' + Math.round(h * .036) + 'px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif';
+    g.fillText('Wednesday, September 9', w / 2, h * .2);
+    g.font = '200 ' + Math.round(h * .22) + 'px -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, sans-serif';
+    g.fillText('9:41', w / 2, h * .425);
+    g.fillStyle = 'rgba(255,255,255,.7)';
+    var bw = w * .2, bh = h * .012; g.beginPath(); g.roundRect((w - bw) / 2, h * .943, bw, bh, bh / 2); g.fill();
+    return c;
+  }
+
+  var VERT = [
+    '#version 300 es',
+    'in vec2 aUV;',
+    'uniform float uProgress, uPerspective, uBend, uAspect, uCamera, uMaxTilt;',
+    'out vec2 vUV;',
+    // Position of the sheet at height h above the hinge: a rigid tilt when bend is 0,
+    // a curl that leaves the base in place when bend is 1. Integrated in 24 steps.
+    'vec2 profile(float h, float theta, float bend) {',
+    '  vec2 p = vec2(0.0); float st = h / 24.0;',
+    '  for (int i = 0; i < 24; i++) {',
+    '    float s = (float(i) + 0.5) * st;',
+    '    float phi = theta * mix(1.0, smoothstep(0.0, 0.8, s), bend);',
+    '    p += vec2(cos(phi), -sin(phi)) * st;',
+    '  }',
+    '  return p;',
+    '}',
+    'void main() {',
+    '  float h = 1.0 - aUV.y;',
+    '  float theta = uProgress * uPerspective * uMaxTilt;',
+    '  vec2 yz = profile(h, theta, uBend);',
+    '  float x = (aUV.x - 0.5) * uAspect; float y = -0.5 + yz.x; float z = yz.y;',
+    '  float w = uCamera - z;',
+    '  gl_Position = vec4(x / (uAspect * 0.5) * uCamera, y / 0.5 * uCamera, 0.0, w);',
+    '  vUV = aUV;',
+    '}'
+  ].join('\n');
+
+  var FRAG = [
+    '#version 300 es',
+    'precision highp float;',
+    'in vec2 vUV; out vec4 outColor;',
+    'uniform sampler2D uTex;',
+    'uniform float uProgress, uBlur, uShadow, uFrost, uAspect, uCorner;',
+    'float roundedBox(vec2 p, vec2 b, float rt, float rb) {',
+    '  float r = p.y > 0.0 ? rt : rb; vec2 q = abs(p) - b + r;',
+    '  return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;',
+    '}',
+    'void main() {',
+    '  vec2 uv = vUV; float p = uProgress;',
+    '  float topness = 1.0 - uv.y; float band = smoothstep(0.0, 0.85, topness);',
+    // Variable blur: coarser mip levels toward the top, five taps to hide the steps.
+    '  float lod = p * band * (uBlur * 6.0 + uFrost * 1.5);',
+    '  vec2 texel = 1.0 / vec2(textureSize(uTex, 0)); float radius = exp2(lod) * 0.7;',
+    '  vec3 c = textureLod(uTex, uv, lod).rgb * 0.36;',
+    '  c += textureLod(uTex, uv + vec2( 0.9,  0.4) * radius * texel, lod).rgb * 0.16;',
+    '  c += textureLod(uTex, uv + vec2(-0.9, -0.4) * radius * texel, lod).rgb * 0.16;',
+    '  c += textureLod(uTex, uv + vec2(-0.4,  0.9) * radius * texel, lod).rgb * 0.16;',
+    '  c += textureLod(uTex, uv + vec2( 0.4, -0.9) * radius * texel, lod).rgb * 0.16;',
+    '  c = mix(c, vec3(0.93, 0.95, 0.98), p * uFrost * band * 0.6);',
+    // Shade: a top gradient and two dark top corners.
+    '  vec2 ell = vec2(1.2, 0.6);',
+    '  float cl = 1.0 - smoothstep(0.0, 0.6, length(uv / ell));',
+    '  float cr = 1.0 - smoothstep(0.0, 0.6, length((uv - vec2(1.0, 0.0)) / ell));',
+    '  float top = 1.0 - smoothstep(0.0, 0.45, uv.y);',
+    '  float shade = clamp(0.55 * (cl + cr) + 0.35 * top, 0.0, 1.0) * p * 0.9 * (uShadow * 1.8);',
+    '  c *= 1.0 - clamp(shade, 0.0, 0.95);',
+    // Feather the top edge with the bend; round the top corners; soften the silhouette.
+    '  float a = smoothstep(0.0, max(p * 0.22, 0.0005), uv.y);',
+    '  vec2 sp = vec2((uv.x - 0.5) * uAspect, 0.5 - uv.y);',
+    '  float sd = roundedBox(sp, vec2(uAspect * 0.5, 0.5), uCorner, 0.0);',
+    '  float edge = fwidth(sd) + p * 0.006;',
+    '  a *= 1.0 - smoothstep(-edge, 0.0, sd);',
+    '  outColor = vec4(c * a, a);',
+    '}'
+  ].join('\n');
+
+  function FoldGL(canvas) {
+    var gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: true });
+    if (!gl) throw new Error('WebGL 2 unavailable');
+    this.gl = gl; this.canvas = canvas;
+    function shader(type, src) {
+      var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+      return s;
+    }
+    var prog = gl.createProgram();
+    gl.attachShader(prog, shader(gl.VERTEX_SHADER, VERT));
+    gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, FRAG));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+    this.prog = prog;
+    this.u = {};
+    ['uProgress','uPerspective','uBend','uAspect','uCamera','uMaxTilt','uBlur','uShadow','uFrost','uCorner','uTex'].forEach(function (n) {
+      this.u[n] = gl.getUniformLocation(prog, n);
+    }, this);
+
+    var n = 48, verts = [], idx = [];
+    for (var r = 0; r <= n; r++) for (var c = 0; c <= n; c++) verts.push(c / n, r / n);
+    for (var r2 = 0; r2 < n; r2++) for (var c2 = 0; c2 < n; c2++) {
+      var a = r2 * (n + 1) + c2, b = a + 1, d = a + n + 1, e = d + 1;
+      idx.push(a, d, b, b, d, e);
+    }
+    this.indexCount = idx.length;
+    var vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+    var vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
+    var loc = gl.getAttribLocation(prog, 'aUV'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    var ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+    this.vao = vao;
+
+    this.tex = gl.createTexture();
+    this.params = Object.assign({}, STYLES.silk);
+    this.progress = 0;
+    this.dirty = true;
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  }
+  FoldGL.prototype.setSource = function (image) {
+    var gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.dirty = true;
+  };
+  FoldGL.prototype.resize = function () {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = Math.max(Math.round(this.canvas.clientWidth * dpr), 2), h = Math.max(Math.round(this.canvas.clientHeight * dpr), 2);
+    if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h; this.dirty = true; }
+  };
+  FoldGL.prototype.render = function () {
+    if (!this.dirty) return;
+    this.dirty = false;
+    var gl = this.gl, u = this.u, p = this.params;
+    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(this.prog); gl.bindVertexArray(this.vao);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.tex); gl.uniform1i(u.uTex, 0);
+    gl.uniform1f(u.uProgress, this.progress);
+    gl.uniform1f(u.uPerspective, p.perspective); gl.uniform1f(u.uBend, p.bend);
+    gl.uniform1f(u.uBlur, p.blur); gl.uniform1f(u.uShadow, p.shadow); gl.uniform1f(u.uFrost, p.frost);
+    gl.uniform1f(u.uAspect, this.canvas.width / this.canvas.height);
+    gl.uniform1f(u.uCamera, 2.4); gl.uniform1f(u.uMaxTilt, 72 * Math.PI / 180); gl.uniform1f(u.uCorner, 0.03);
+    gl.drawElements(gl.TRIANGLES, this.indexCount, gl.UNSIGNED_SHORT, 0);
+  };
+
+  var wallpaper = drawWallpaper(1280, 832);
+  var fallbackURL = wallpaper.toDataURL('image/png');
+  function makeFold(canvasId, screenId, fallbackId) {
+    var canvas = document.getElementById(canvasId), screen = document.getElementById(screenId), fallback = document.getElementById(fallbackId);
+    fallback.style.background = 'url(' + fallbackURL + ') center / cover';
+    try {
+      var fold = new FoldGL(canvas);
+      fold.setSource(wallpaper);
+      screen.classList.add('gl');
+      return { gl: fold, fallback: fallback, set: function (progress, params) {
+        fold.progress = progress; if (params) fold.params = params; fold.dirty = true;
+      }, draw: function () { fold.resize(); fold.render(); } };
+    } catch (err) {
+      // No WebGL 2: keep the still wallpaper and tilt it with CSS.
+      return { gl: null, fallback: fallback, set: function (progress) {
+        fallback.style.transform = 'perspective(1400px) rotateX(' + (progress * 72).toFixed(2) + 'deg)';
+        fallback.style.filter = 'brightness(' + (1 - progress * 0.35).toFixed(3) + ')';
+      }, draw: function () {} };
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sound: the click the app plays when the lid opens and the desktop clears,
+  // synthesised the same way. Browsers need a tap first, so it arms on the first one.
+  // ---------------------------------------------------------------------------
+  var audio = null, audioReady = false;
+  function armAudio() {
+    if (audioReady || reduced) return;
+    try { audio = new (window.AudioContext || window.webkitAudioContext)(); audioReady = true; } catch (e) {}
+  }
+  ['pointerdown', 'keydown'].forEach(function (ev) { addEventListener(ev, armAudio, { passive: true }); });
+  function click() {
+    if (!audioReady || document.hidden) return;
+    if (audio.state === 'suspended') audio.resume();
+    var rate = audio.sampleRate, frames = Math.round(rate * 0.085), buf = audio.createBuffer(1, frames, rate), d = buf.getChannelData(0), seed = 0x9E3779B9;
+    for (var i = 0; i < frames; i++) {
+      var t = i / rate; seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      var noise = ((seed >>> 8) / (1 << 24)) * 2 - 1;
+      var attack = Math.min(t / 0.0015, 1);
+      d[i] = (Math.sin(2 * Math.PI * 1800 * t) * Math.exp(-t * 55) * 0.55 + noise * Math.exp(-t * 260) * 0.45 + Math.sin(2 * Math.PI * 420 * t) * Math.exp(-t * 40) * 0.25) * attack * 0.5;
+    }
+    var src = audio.createBufferSource(); src.buffer = buf; src.connect(audio.destination); src.start();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scroll drives the first MacBook: the fold follows the page, smoothed on top.
+  // ---------------------------------------------------------------------------
+  var scrollFold = makeFold('scrollCanvas', 'scrollScreen', 'scrollFallback');
+  var travel = 900, current = 0, target = 0;
+  var bends = 0, armed = true, counter = document.getElementById('bendTotal');
+  function onScroll() { target = reduced ? 0 : smooth(clamp01(window.scrollY / travel)); }
+  addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  function checkBend(p) {
+    if (armed && p > 0.8) { armed = false; bends += 1; counter.textContent = bends.toLocaleString(); }
+    else if (!armed && p < 0.5) { armed = true; if (!document.hidden) click(); }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Take a closer look: the slider and the chips move the 3D lid; the fold on its
+  // screen follows the same curve the app uses.
+  // ---------------------------------------------------------------------------
+  var lidFold = makeFold('lidCanvas', 'lidPanel', 'lidFallback');
+  var lid = document.getElementById('lid3d');
+  var range = document.getElementById('lidRange');
+  var readout = document.getElementById('angleReadout');
+  var stateTitle = document.getElementById('stateTitle'), stateBlurb = document.getElementById('stateBlurb');
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip'));
+  var lidTarget = 135, lidNow = 135, style = 'silk', activeChip = null;
+  var CHIPS = {
+    open:    { title: 'Open.',    blurb: 'Lid all the way up. The desktop sits flat and sharp, nothing in the way.', angle: function () { return 135; } },
+    halfway: { title: 'Halfway.', blurb: 'The lid on its way down. The desktop tilts back and the top begins to blur.', angle: function () { return angleFor(0.5); } },
+    closed:  { title: 'Closed.',  blurb: 'Almost shut. The desktop settles into its fold, soft and shaded, a breath before the Mac sleeps.', angle: function () { return angleFor(0.97); } },
+    silk:    { title: 'Silk.',    blurb: 'A soft tilt with a light blur. Closest to the fold on iPhone Duo.', angle: function () { return angleFor(0.62); }, style: 'silk' },
+    shade:   { title: 'Shade.',   blurb: 'The same tilt, with the top of the desktop falling into shadow.', angle: function () { return angleFor(0.62); }, style: 'shade' },
+    frost:   { title: 'Frost.',   blurb: 'Heavier blur and a cool haze, like breath on glass.', angle: function () { return angleFor(0.62); }, style: 'frost' }
+  };
+  var DEFAULT_STATE = { title: 'Foldable desktop.', blurb: 'Offers the fluid fold of iPhone Duo in a Mac you already own. The base of the desktop stays put; the top folds away, blurs and falls into shadow.' };
+  function setState(s) { stateTitle.textContent = s.title; stateBlurb.textContent = s.blurb; }
+  function selectChip(name) {
+    activeChip = name;
+    chips.forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.chip === name ? 'true' : 'false'); });
+    if (name) {
+      var chip = CHIPS[name];
+      setState(chip);
+      if (chip.style) style = chip.style;
+      lidTarget = chip.angle();
+      range.value = lidTarget;
+    } else {
+      setState(DEFAULT_STATE);
+    }
+  }
+  chips.forEach(function (b) { b.addEventListener('click', function () { selectChip(b.dataset.chip); }); });
+  range.addEventListener('input', function () {
+    lidTarget = parseFloat(range.value);
+    if (activeChip !== null && Math.abs(CHIPS[activeChip].angle() - lidTarget) > 0.5) selectChip(null);
+  });
+
+  function paintLid(angle) {
+    lid.style.transform = 'rotateX(' + (angle - 90).toFixed(2) + 'deg)';
+    readout.textContent = Math.round(angle) + '°';
+    lidFold.set(progressFor(angle), STYLES[style]);
+  }
+
+  var lastStyle = null;
+  function frame() {
+    if (!reduced) {
+      current += (target - current) * 0.08;
+      if (Math.abs(target - current) < 0.0005) current = target;
+      lidNow += (lidTarget - lidNow) * 0.14;
+      if (Math.abs(lidTarget - lidNow) < 0.02) lidNow = lidTarget;
+    } else {
+      current = target; lidNow = lidTarget;
+    }
+    checkBend(current);
+    scrollFold.set(current);
+    scrollFold.draw();
+    if (lidNow !== paintLid.last || style !== lastStyle) { paintLid(lidNow); paintLid.last = lidNow; lastStyle = style; }
+    lidFold.draw();
+    requestAnimationFrame(frame);
+  }
+  paintLid(lidNow);
+  requestAnimationFrame(frame);
+  addEventListener('resize', function () { scrollFold.set(current); lidFold.set(progressFor(lidNow), STYLES[style]); });
+})();
+</script>
+</body>
+</html>
