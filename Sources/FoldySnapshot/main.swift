@@ -20,6 +20,7 @@ struct Options {
     var source: String?
     var bend: Double?
     var background = "clear"
+    var height: Int?
 }
 
 func parse() -> Options {
@@ -37,16 +38,21 @@ func parse() -> Options {
         case "--out": options.out = value(arg)
         case "--scene": options.scene = value(arg)
         case "--style":
-            guard let style = FoldStyle(rawValue: value(arg).lowercased()) else { exit(2) }
+            let name = value(arg)
+            guard let style = FoldStyle(rawValue: name.lowercased()) else {
+                FileHandle.standardError.write("unknown style \(name); use silk, shade or frost\n".data(using: .utf8)!)
+                exit(2)
+            }
             options.style = style
         case "--progress": options.progress = Double(value(arg))
         case "--lid": options.lid = Double(value(arg)) ?? 60
         case "--width": options.width = Int(value(arg)) ?? 1400
+        case "--height": options.height = Int(value(arg))
         case "--source": options.source = value(arg)
         case "--bend": options.bend = Double(value(arg))
         case "--background": options.background = value(arg)
         case "-h", "--help":
-            print("usage: foldy-snapshot [--out file.png] [--scene flat|macbook] [--style silk|shade|frost] [--progress 0..1] [--lid degrees] [--width px] [--source image.png] [--bend 0..1] [--background clear|white|black]")
+            print("usage: foldy-snapshot [--out file.png] [--scene flat|macbook] [--style silk|shade|frost] [--progress 0..1] [--lid degrees] [--width px] [--source image.png] [--bend 0..1] [--background clear|white|black] [--height px]")
             exit(0)
         default:
             FileHandle.standardError.write("unknown argument \(arg)\n".data(using: .utf8)!)
@@ -92,7 +98,7 @@ if options.scene == "macbook" {
     scene.targetLidAngle = options.progress.map { curve.angle(forFraction: $0) } ?? options.lid
     scene.backgroundColor = clear
     scene.step()
-    let height = Int(Double(options.width) * 0.64)
+    let height = options.height ?? Int(Double(options.width) * 0.64)
     guard let target = graphics.makeTargetTexture(width: options.width, height: height, label: "Snapshot") else { exit(1) }
     scene.encode(into: commandBuffer, target: target, depth: nil)
     output = target

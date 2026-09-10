@@ -1,0 +1,17 @@
+# Builds the package and runs the tests on a macOS runner.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - run: swift build
+      - run: swift test
+      - run: Scripts/bundle.sh release

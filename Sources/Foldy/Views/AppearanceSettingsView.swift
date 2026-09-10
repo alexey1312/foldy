@@ -40,7 +40,11 @@ struct AppearanceSettingsView: View {
                 HStack(spacing: 14) {
                     FoldSlider(value: $settings.previewAngle, range: 0...FoldCurve.fullyOpenAngle)
                         .disabled(followsLid)
-                        .onChange(of: settings.previewAngle) { _, _ in selectedChip = nil }
+                        .onChange(of: settings.previewAngle) { _, angle in
+                            if let chip = selectedChip, abs(chip.angle(curve: settings.curve) - angle) > 0.5 {
+                                selectedChip = nil
+                            }
+                        }
                     Text("\(Int(controller.previewAngle.rounded()))°")
                         .font(.system(size: 14, weight: .medium).monospacedDigit())
                         .frame(width: 44, alignment: .trailing)
@@ -132,8 +136,6 @@ struct AppearanceSettingsView: View {
         }
         if followsLid { settings.previewFollowsLid = false }
         settings.previewAngle = chip.angle(curve: settings.curve)
-        // The slider's onChange clears the chip; put it back after the write lands.
-        DispatchQueue.main.async { selectedChip = chip }
     }
 
     enum Chip: String, CaseIterable, Identifiable {

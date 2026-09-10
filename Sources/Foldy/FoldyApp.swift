@@ -68,10 +68,11 @@ enum DevFlags {
             }
         }
         if let path = value(after: "--screenshot-fold") {
-            AppController.shared.settings.sampleWallpaper = true
-            AppController.shared.setOverlayCapturable(true)
+            let controller = AppController.shared
+            controller.forcesSampleWallpaper = true
+            controller.setOverlayCapturable(true)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                AppController.shared.sweep()
+                controller.sweep()
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
                 let window = NSApp.windows.first { $0 is OverlayWindow && $0.isVisible }

@@ -1,0 +1,50 @@
+# Tag a commit v1.2.3 and push the tag: this builds Foldy.app on a macOS runner,
+# packs it as a zip and a DMG, and publishes both on a GitHub Release.
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# The app is ad-hoc signed, not notarized. macOS blocks the first launch: open it
+# once, then System Settings › Privacy & Security › Open Anyway. Or clear the flag:
+#   xattr -dr com.apple.quarantine /Applications/Foldy.app
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - name: Stamp the version from the tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Support/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Support/Info.plist
+      - run: swift test
+      - run: Scripts/bundle.sh release
+      - name: Pack
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          ditto -c -k --keepParent build/Foldy.app "dist/Foldy-$VERSION.zip"
+          STAGE="$(mktemp -d)"
+          cp -R build/Foldy.app "$STAGE/"
+          ln -s /Applications "$STAGE/Applications"
+          hdiutil create -volname Foldy -srcfolder "$STAGE" -ov -format UDZO "dist/Foldy-$VERSION.dmg"
+          shasum -a 256 dist/* > dist/SHA256SUMS.txt
+          cat dist/SHA256SUMS.txt
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "Foldy $VERSION" \
+            --generate-notes \
+            --notes "Ad-hoc signed, not notarized. macOS blocks the first launch: open Foldy once, then System Settings › Privacy & Security › **Open Anyway**. Or clear the quarantine flag first: \`xattr -dr com.apple.quarantine /Applications/Foldy.app\`. Needs macOS 14 and an Apple silicon MacBook with a lid angle sensor; grant Screen Recording when asked."

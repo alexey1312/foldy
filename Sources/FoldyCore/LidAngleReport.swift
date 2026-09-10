@@ -38,14 +38,15 @@ public struct MacModel: Sendable, Equatable {
         self.identifier = identifier
     }
 
-    public static func current() -> MacModel {
+    /// This Mac. Read once; `hw.model` does not change while the process runs.
+    public static let current: MacModel = {
         var size = 0
         sysctlbyname("hw.model", nil, &size, nil, 0)
         var buffer = [UInt8](repeating: 0, count: max(size, 1))
         sysctlbyname("hw.model", &buffer, &size, nil, 0)
         let identifier = String(decoding: buffer.prefix(while: { $0 != 0 }), as: UTF8.self)
         return MacModel(identifier: identifier)
-    }
+    }()
 
     /// A one-line reason the sensor is missing, or `nil` when the model might have one.
     /// Only the certain cases are listed; the HID probe has the final say.
@@ -54,10 +55,11 @@ public struct MacModel: Sendable, Equatable {
         if id.hasPrefix("Macmini") || id.hasPrefix("MacPro") || id.hasPrefix("iMac") {
             return "This is a desktop Mac. It has no lid."
         }
+        // Mac Studio (M1, M2), Mac mini (M2, M4 Pro), Mac Pro (M2), iMac (M3, M4).
+        // Anything not listed is left to the HID probe.
         let desktops: Set<String> = [
             "Mac13,1", "Mac13,2", "Mac14,3", "Mac14,8", "Mac14,12", "Mac14,13", "Mac14,14",
-            "Mac15,4", "Mac15,5", "Mac15,10", "Mac15,12", "Mac15,13",
-            "Mac16,2", "Mac16,3", "Mac16,4", "Mac16,11", "Mac16,15", "Mac16,16", "Mac16,17", "Mac16,18",
+            "Mac15,4", "Mac15,5", "Mac16,2", "Mac16,3", "Mac16,11",
         ]
         if desktops.contains(id) {
             return "This is a desktop Mac. It has no lid."
@@ -71,7 +73,7 @@ public struct MacModel: Sendable, Equatable {
                 "MacBookPro18,1", "MacBookPro18,2", "MacBookPro18,3", "MacBookPro18,4",
             ]
             if !withSensor.contains(id) {
-                return "This MacBook Pro predates the lid angle sensor (2019 16-inch onward)."
+                return "This MacBook Pro has no lid angle sensor; the 2019 16-inch and the 2021 14- and 16-inch onward do."
             }
         }
         return nil

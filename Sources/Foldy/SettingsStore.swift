@@ -20,6 +20,7 @@ final class SettingsStore {
 
     private static let key = "app.foldy.settings"
     private var loading = true
+    @ObservationIgnored private var pendingSave: DispatchWorkItem?
 
     var style: FoldStyle { didSet { save() } }
     /// Tuned parameters per style; a style with no entry uses its factory settings.
@@ -83,8 +84,17 @@ final class SettingsStore {
 
     // MARK: Persistence
 
+    /// Writes are coalesced: a slider produces dozens of changes a second.
     private func save() {
         guard !loading else { return }
+        pendingSave?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.writeNow() }
+        pendingSave = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: work)
+    }
+
+    private func writeNow() {
+        pendingSave = nil
         let snapshot = Snapshot(
             style: style, styleParameters: styleParameters, curve: curve, soundEnabled: soundEnabled,
             previewFollowsLid: previewFollowsLid, previewAngle: previewAngle,

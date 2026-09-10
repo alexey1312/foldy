@@ -110,7 +110,7 @@ struct GeneralSettingsView: View {
     private var sensorSubtitle: String {
         switch controller.sensorAvailability {
         case .searching: "Apple silicon MacBooks and the 2019 16-inch MacBook Pro have one."
-        case .available: "Read from the Mac's own hinge sensor (\(MacModel.current().identifier))."
+        case .available: "Read from the Mac's own hinge sensor (\(MacModel.current.identifier))."
         case let .unavailable(reason): reason
         }
     }

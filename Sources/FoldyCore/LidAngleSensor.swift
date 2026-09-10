@@ -5,9 +5,9 @@ import IOKit.hid
 /// Reads the hinge angle from the MacBook's own lid angle sensor.
 ///
 /// The sensor is a HID device. It is asked for its feature report on a timer that
-/// runs fast (60 Hz) while the lid is moving and slows to a heartbeat (4 Hz) once it
+/// runs fast (60 Hz) while the lid is moving and slows to a heartbeat (10 Hz) once it
 /// has settled, and it is also asked to push input reports; if the hardware does,
-/// polling drops to the heartbeat and the angle arrives the moment it changes.
+/// polling stays at the heartbeat and the angle arrives the moment it changes.
 ///
 /// All work happens on a private queue. Callbacks are delivered on that queue.
 public final class LidAngleSensor: @unchecked Sendable {
@@ -32,7 +32,6 @@ public final class LidAngleSensor: @unchecked Sendable {
     private var timer: DispatchSourceTimer?
     private var searchTimeout: DispatchWorkItem?
     private var featureReport = [UInt8](repeating: 0, count: LidAngleReport.reportLength)
-    private let inputReport = UnsafeMutablePointer<UInt8>.allocate(capacity: 64)
     private var lastAngle: Double?
     private var lastMovement: TimeInterval = 0
     private var receivedInputReport = false
@@ -40,19 +39,17 @@ public final class LidAngleSensor: @unchecked Sendable {
     private(set) public var availability: Availability = .searching
 
     private static let fastInterval: TimeInterval = 1.0 / 60.0
-    private static let idleInterval: TimeInterval = 1.0 / 4.0
+    private static let idleInterval: TimeInterval = 1.0 / 10.0
     private static let settleDelay: TimeInterval = 1.2
 
     public init() {}
-
-    deinit {
-        inputReport.deallocate()
-    }
 
     public func start() {
         queue.async { self.startOnQueue() }
     }
 
+    /// Cancels the HID manager. The sensor stays alive until IOKit confirms the
+    /// cancellation, then lets go of itself; callbacks can never reach a freed object.
     public func stop() {
         queue.async { self.stopOnQueue() }
     }
@@ -62,7 +59,7 @@ public final class LidAngleSensor: @unchecked Sendable {
     private func startOnQueue() {
         guard manager == nil else { return }
 
-        if let reason = MacModel.current().reasonWithoutLid {
+        if let reason = MacModel.current.reasonWithoutLid {
             publish(.unavailable(reason: reason))
             // Keep looking anyway: the model table is a hint, the HID probe is the truth.
         }
@@ -76,7 +73,10 @@ public final class LidAngleSensor: @unchecked Sendable {
         ]
         IOHIDManagerSetDeviceMatching(manager, matching as CFDictionary)
 
-        let context = Unmanaged.passUnretained(self).toOpaque()
+        // The manager holds a strong reference to the sensor until its cancel handler
+        // runs, so the raw context pointer in the C callbacks is always valid.
+        let retained = Unmanaged.passRetained(self)
+        let context = retained.toOpaque()
         IOHIDManagerRegisterDeviceMatchingCallback(manager, { context, _, _, device in
             guard let context else { return }
             Unmanaged<LidAngleSensor>.fromOpaque(context).takeUnretainedValue().attach(device)
@@ -85,7 +85,27 @@ public final class LidAngleSensor: @unchecked Sendable {
             guard let context else { return }
             Unmanaged<LidAngleSensor>.fromOpaque(context).takeUnretainedValue().detach(device)
         }, context)
+        // Input reports must be registered on the manager before it is activated;
+        // devices it matches are scheduled with it and must not be registered again.
+        IOHIDManagerRegisterInputReportCallback(manager, { context, result, _, _, reportID, report, length in
+            guard let context, result == kIOReturnSuccess, reportID == UInt32(LidAngleReport.reportID) else { return }
+            let sensor = Unmanaged<LidAngleSensor>.fromOpaque(context).takeUnretainedValue()
+            guard let angle = LidAngleReport.angle(in: UnsafeBufferPointer(start: report, count: length)) else { return }
+            sensor.receivedInputReport = true
+            sensor.deliver(angle)
+        }, context)
+        IOHIDManagerSetCancelHandler(manager) {
+            // Runs on the queue once IOKit has stopped calling back. Only now may the
+            // manager be released and the sensor let go of.
+            let sensor = retained.takeUnretainedValue()
+            sensor.manager = nil
+            retained.release()
+        }
         IOHIDManagerSetDispatchQueue(manager, queue)
+        // Open before activating so matched devices are usable from the callback.
+        // A device that fails to open is reported in attach(); the manager's own
+        // result is not decisive, so it is not checked here.
+        IOHIDManagerOpen(manager, options)
         IOHIDManagerActivate(manager)
         self.manager = manager
 
@@ -102,14 +122,13 @@ public final class LidAngleSensor: @unchecked Sendable {
         timer = nil
         searchTimeout?.cancel()
         if let device {
-            IOHIDDeviceRegisterInputReportCallback(device, inputReport, 64, nil, nil)
             IOHIDDeviceClose(device, options)
         }
         device = nil
         if let manager {
-            IOHIDManagerCancel(manager)
+            IOHIDManagerClose(manager, options)
+            IOHIDManagerCancel(manager) // the cancel handler clears `manager`
         }
-        manager = nil
     }
 
     private func attach(_ device: IOHIDDevice) {
@@ -127,16 +146,6 @@ public final class LidAngleSensor: @unchecked Sendable {
             publish(.unavailable(reason: "The lid angle sensor answered with a report this build does not understand."))
             return
         }
-
-        let context = Unmanaged.passUnretained(self).toOpaque()
-        IOHIDDeviceRegisterInputReportCallback(device, inputReport, 64, { context, result, _, _, reportID, report, length in
-            guard let context, result == kIOReturnSuccess, reportID == UInt32(LidAngleReport.reportID) else { return }
-            let sensor = Unmanaged<LidAngleSensor>.fromOpaque(context).takeUnretainedValue()
-            let bytes = UnsafeBufferPointer(start: report, count: length)
-            guard let angle = LidAngleReport.angle(in: bytes) else { return }
-            sensor.receivedInputReport = true
-            sensor.deliver(angle)
-        }, context)
 
         publish(.available)
         deliver(angle)

@@ -1,4 +1,4 @@
-.PHONY: build app run test snapshot clean
+.PHONY: build app run test snapshot icon clean
 
 build:
 	swift build
@@ -21,6 +21,9 @@ snapshot:
 	.build/debug/foldy-snapshot --out docs/snapshots/macbook-open.png --scene macbook --lid 135 --width 1200 --background white
 	.build/debug/foldy-snapshot --out docs/snapshots/macbook-halfway.png --scene macbook --lid 60 --width 1200 --background white
 	.build/debug/foldy-snapshot --out docs/snapshots/macbook-closing.png --scene macbook --lid 28 --style frost --width 1200 --background white
+
+icon:
+	Scripts/make-icon.sh
 
 clean:
 	rm -rf .build build

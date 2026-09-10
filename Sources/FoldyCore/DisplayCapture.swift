@@ -74,14 +74,18 @@ public final class DisplayCapture: NSObject, @unchecked Sendable {
             let filter = SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
 
             let configuration = SCStreamConfiguration()
-            let pixelWidth = Double(CGDisplayPixelsWide(display.displayID))
-            let pixelHeight = Double(CGDisplayPixelsHigh(display.displayID))
+            // SCDisplay.width and CGDisplayPixelsWide report points on Retina displays;
+            // the display mode carries the real pixel size.
+            let mode = CGDisplayCopyDisplayMode(display.displayID)
+            let pixelWidth = Double(mode?.pixelWidth ?? CGDisplayPixelsWide(display.displayID))
+            let pixelHeight = Double(mode?.pixelHeight ?? CGDisplayPixelsHigh(display.displayID))
             configuration.width = max(Int(pixelWidth * scale), 2)
             configuration.height = max(Int(pixelHeight * scale), 2)
             configuration.pixelFormat = kCVPixelFormatType_32BGRA
             configuration.minimumFrameInterval = CMTime(value: 1, timescale: 60)
             configuration.queueDepth = 3
-            configuration.showsCursor = true
+            // The real cursor stays above the overlay; a captured copy would double it.
+            configuration.showsCursor = false
             configuration.capturesShadowsOnly = false
 
             nonisolated(unsafe) let stream = SCStream(filter: filter, configuration: configuration, delegate: self)
@@ -97,7 +101,12 @@ public final class DisplayCapture: NSObject, @unchecked Sendable {
                 self.set(.running)
             }
         } catch {
-            queue.async { self.set(.failed(error.localizedDescription)) }
+            let message = error.localizedDescription
+            queue.async {
+                // A stop() that raced this start already put the state back to idle.
+                guard generation == self.generation else { return }
+                self.set(.failed(message))
+            }
         }
     }
 
@@ -129,9 +138,13 @@ extension DisplayCapture: SCStreamOutput, SCStreamDelegate {
     }
 
     public func stream(_ stream: SCStream, didStopWithError error: Error) {
+        let message = error.localizedDescription
+        nonisolated(unsafe) let stopped = stream
         queue.async {
+            // A stream that was already replaced or stopped has nothing to report.
+            guard self.stream === stopped else { return }
             self.stream = nil
-            self.set(.failed(error.localizedDescription))
+            self.set(.failed(message))
         }
     }
 }

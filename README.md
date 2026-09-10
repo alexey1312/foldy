@@ -1,6 +1,6 @@
 # Foldy
 
-**Your desktop bends as you close the lid.**
+**Your desktop bends as you close the lid.** · [foldy on GitHub Pages](https://alexey1312.github.io/foldy/)
 
 The fluid fold from iPhone Duo, for the MacBook you already have. As the lid comes
 down, Foldy captures the desktop and draws it back as a sheet that tilts, bends,
@@ -20,7 +20,7 @@ and IOKit. No account, no license key, no network code.
 - **Lid sensor.** Reads the hinge angle from the Mac's own HID sensor (vendor
   `0x05AC`, product `0x8104`, Sensor page, Orientation usage). It registers for
   input reports and keeps a heartbeat poll that runs at 60 Hz only while the lid
-  is moving and drops to 4 Hz once it settles.
+  is moving and drops to 10 Hz once it settles.
 - **Live desktop.** Captures the built-in display with ScreenCaptureKit, excluding
   Foldy's own windows, and uploads each frame straight to a mipmapped Metal texture.
 - **The fold.** A 64×64 grid tilts about the hinge and, with the *Bend* slider,
@@ -50,6 +50,23 @@ and IOKit. No account, no license key, no network code.
 
 On a Mac without the sensor (a desktop, or an older laptop) everything except the
 lid still works: the settings preview, the style thumbnails and *Try It Now*.
+
+## Install
+
+Grab `Foldy-x.y.z.dmg` or the zip from the
+[releases page](https://github.com/alexey1312/foldy/releases) and drag Foldy to
+Applications. The build is ad-hoc signed, not notarized, so macOS blocks the first
+launch: open it once, then go to System Settings › Privacy & Security, scroll to the
+message about Foldy and click **Open Anyway**. Or clear the quarantine flag first:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Foldy.app
+```
+
+Then allow Screen Recording when macOS asks, and reopen the app.
+
+Releases are cut by `.github/workflows/release.yml` from a `v*` tag; CI on every
+push builds the package, runs the tests and bundles the app.
 
 ## Build and run
 
@@ -121,10 +138,12 @@ site/index.html         The landing page: the same fold in WebGL, scroll-driven,
 
 ## The landing page
 
-`site/index.html` is a single file. It ports the Metal shader to WebGL 2, so the
-MacBook at the top of the page bends as you scroll exactly the way the app bends
-the desktop, and the "Take a closer look" section swings a CSS 3D lid on its hinge
-with the fold on its screen. Open the file in a browser, or serve the folder.
+`site/index.html` is a single file, published to GitHub Pages at
+<https://alexey1312.github.io/foldy/> by `.github/workflows/pages.yml` on every
+push to `main`. It ports the Metal shader to WebGL 2, so the MacBook at the top of
+the page bends as you scroll exactly the way the app bends the desktop, and the
+"Take a closer look" section swings a CSS 3D lid on its hinge with the fold on its
+screen. Open the file in a browser, or serve the folder.
 
 ## Status
 
@@ -139,9 +158,9 @@ Not yet checked, because this machine has no lid and no Screen Recording grant:
 
 - Reading the real sensor. The report layout (feature report 1, bytes 1–2,
   little-endian degrees) follows [samhenrigold/LidAngleSensor](https://github.com/samhenrigold/LidAngleSensor),
-  which has been confirmed on M3/M4 MacBook Pros; some M1/M2 machines are reported
-  to expose the device on a vendor-specific usage page instead, which Foldy
-  reports as "found but not readable".
+  whose author tested it on an M4 MacBook Pro; that project's issues report some
+  M1/M2 machines exposing the device on a vendor-specific usage page instead,
+  which Foldy reports as "found but not readable".
 - Whether the sensor pushes input reports. If it does not, the heartbeat poll
   carries the angle on its own.
 - The live ScreenCaptureKit path on a granted machine.

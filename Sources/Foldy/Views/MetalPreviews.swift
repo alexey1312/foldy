@@ -21,6 +21,8 @@ struct MacBookPreviewView: NSViewRepresentable {
         view.depthStencilPixelFormat = FoldGraphics.depthFormat
         view.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         view.preferredFramesPerSecond = 60
+        // Draws continuously only while the lid or the fold is moving; see draw(_:).
+        view.enableSetNeedsDisplay = true
         view.layer?.isOpaque = false
         (view.layer as? CAMetalLayer)?.isOpaque = false
         return view
@@ -31,6 +33,8 @@ struct MacBookPreviewView: NSViewRepresentable {
         scene?.targetLidAngle = lidAngle
         scene?.fold.parameters = parameters
         scene?.curve = curve
+        view.isPaused = false
+        view.needsDisplay = true
     }
 
     final class Coordinator {
@@ -57,6 +61,8 @@ final class SceneMetalView: MTKView {
         scene.encode(into: commandBuffer, target: drawable.texture, depth: depthStencilTexture)
         commandBuffer.present(drawable)
         commandBuffer.commit()
+        // Once everything has settled, stop the display link until a new target arrives.
+        if scene.isSettled { isPaused = true }
     }
 }
 

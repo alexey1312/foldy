@@ -48,7 +48,6 @@ public final class FoldRenderer: @unchecked Sendable {
     private let lock = NSLock()
     private var pendingPixelBuffer: CVPixelBuffer?
     private var source: MTLTexture?
-    private var sourceNeedsMipmaps = false
 
     public static let gridResolution = 64
 
@@ -107,7 +106,6 @@ public final class FoldRenderer: @unchecked Sendable {
         lock.lock()
         pendingPixelBuffer = nil
         source = texture
-        sourceNeedsMipmaps = false
         lock.unlock()
     }
 
@@ -152,6 +150,9 @@ public final class FoldRenderer: @unchecked Sendable {
     /// Uploads any pending frame, then draws the sheet into `target`.
     public func encode(into commandBuffer: MTLCommandBuffer, target: MTLTexture, clearColor: MTLClearColor) {
         uploadPendingFrame(commandBuffer: commandBuffer)
+        lock.lock()
+        let source = source
+        lock.unlock()
         guard let source else {
             clear(target, with: clearColor, commandBuffer: commandBuffer)
             return
@@ -221,9 +222,12 @@ public final class FoldRenderer: @unchecked Sendable {
         )
         guard status == kCVReturnSuccess, let cvTexture, let frame = CVMetalTextureGetTexture(cvTexture) else { return }
 
+        lock.lock()
         if source == nil || source?.width != width || source?.height != height || source?.mipmapLevelCount == 1 {
             source = graphics.makeMipmappedTexture(width: width, height: height, label: "Desktop")
         }
+        let source = source
+        lock.unlock()
         guard let source, let blit = commandBuffer.makeBlitCommandEncoder() else { return }
         blit.label = "Desktop upload"
         blit.copy(from: frame, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(), sourceSize: MTLSize(width: width, height: height, depth: 1),

@@ -22,6 +22,18 @@ final class AppController {
     @ObservationIgnored private var soundArmed = false
     @ObservationIgnored private var started = false
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
+    @ObservationIgnored private var lastCaptureFailure: Date?
+    @ObservationIgnored private var captureIdleTimer: DispatchWorkItem?
+    /// Development only (`--screenshot-fold`): never persisted, unlike the setting.
+    @ObservationIgnored var forcesSampleWallpaper = false
+    private static let captureRetryDelay: TimeInterval = 5
+    /// How long the desktop may sit flat with the lid near the fold before the
+    /// capture is stopped. It restarts on the next lid movement.
+    private static let captureIdleTimeout: TimeInterval = 4
+    /// The fold has to reach this much before the overlay is shown; once shown it
+    /// stays until the fold is fully gone, so a lid resting at the clear angle
+    /// does not flicker the window in and out.
+    private static let showThreshold: Double = 0.02
 
     /// The hinge angle from the sensor, degrees.
     private(set) var lidAngle: Double = FoldCurve.fullyOpenAngle
@@ -62,7 +74,7 @@ final class AppController {
     }
 
     var usesSampleWallpaper: Bool {
-        settings.sampleWallpaper || !hasScreenPermission
+        forcesSampleWallpaper || settings.sampleWallpaper || !hasScreenPermission
     }
 
     var statusLine: String {
@@ -99,6 +111,7 @@ final class AppController {
         capture.onState = { state in
             Task { @MainActor in
                 AppController.shared.captureState = state
+                if state.isFailure { AppController.shared.lastCaptureFailure = Date() }
                 AppController.shared.evaluate()
             }
         }
@@ -129,7 +142,7 @@ final class AppController {
             MainActor.assumeIsolated { AppController.shared.evaluate() }
         })
         observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { AppController.shared.overlay?.screenChanged() }
+            MainActor.assumeIsolated { AppController.shared.screenChanged() }
         })
 
         sensor.start()
@@ -252,24 +265,49 @@ final class AppController {
         if isDismissed, angle >= curve.clearAngle { isDismissed = false }
 
         let progress = curve.progress(forAngle: angle)
-        let wantsFold = !isPaused && !isDismissed && progress > 0
+        let shown = overlay?.isShown == true
+        let wantsFold = !isPaused && !isDismissed && progress > (shown ? 0 : Self.showThreshold)
         let nearFold = angle < curve.clearAngle + 15
         let wantsCapture = !isPaused && !usesSampleWallpaper && (nearFold || wantsFold)
 
-        updateCapture(wanted: wantsCapture, farFromFold: angle > curve.clearAngle + 25)
+        updateCapture(wanted: wantsCapture, farFromFold: angle > curve.clearAngle + 25, idle: !wantsFold)
         updateOverlay(wantsFold: wantsFold, progress: progress)
         updateSound(progress: progress)
     }
 
-    private func updateCapture(wanted: Bool, farFromFold: Bool) {
+    private func updateCapture(wanted: Bool, farFromFold: Bool, idle: Bool) {
+        // A lid parked just below the clear angle would otherwise stream the display
+        // for hours with nothing on screen. Stop after a quiet spell; a movement restarts it.
+        if wanted, idle, captureState == .running {
+            if captureIdleTimer == nil {
+                let timer = DispatchWorkItem { [weak self] in
+                    guard let self else { return }
+                    captureIdleTimer = nil
+                    guard captureState == .running, overlay?.isShown != true else { return }
+                    capture.stop()
+                    overlay?.clearSource()
+                }
+                captureIdleTimer = timer
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.captureIdleTimeout, execute: timer)
+            }
+        } else {
+            captureIdleTimer?.cancel()
+            captureIdleTimer = nil
+        }
+
         switch (wanted, captureState) {
-        case (true, .idle), (true, .failed):
+        case (true, .idle):
             guard hasScreenPermission else { return }
+            capture.start(displayID: OverlayWindowController.targetDisplayID())
+        case (true, .failed):
+            // Every lid movement calls evaluate(); a broken capture must not be restarted at 60 Hz.
+            guard hasScreenPermission,
+                  lastCaptureFailure.map({ Date().timeIntervalSince($0) > Self.captureRetryDelay }) ?? true else { return }
             capture.start(displayID: OverlayWindowController.targetDisplayID())
         case (false, .running), (false, .starting):
             if farFromFold || isPaused || usesSampleWallpaper {
                 capture.stop()
-                overlay?.renderer.clearSource()
+                overlay?.clearSource()
             }
         default:
             break
@@ -305,6 +343,15 @@ final class AppController {
     private func systemWillSleep() {
         overlay?.hideNow()
         capture.stop()
-        overlay?.renderer.clearSource()
+        overlay?.clearSource()
+    }
+
+    /// The stream's size is fixed at start, so a resolution or display change needs a
+    /// fresh one; the next evaluate() restarts it if the lid is still near the fold.
+    private func screenChanged() {
+        overlay?.screenChanged()
+        capture.stop()
+        overlay?.clearSource()
+        evaluate()
     }
 }

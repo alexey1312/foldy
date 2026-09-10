@@ -151,7 +151,7 @@
   }
   .screen { position: absolute; inset: 1.5cqw 1.5cqw 2.2cqw; border-radius: 3.4cqw 3.4cqw 0 0; overflow: hidden; background: #4c5a70; }
   .screen canvas, .screen .fallback { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-  .screen .fallback { transform-origin: 50% 100%; }
+  .screen .fallback, .lid3d .front .panel .fallback { transform-origin: 50% 100%; }
   .screen.gl .fallback { display: none; }
   .notch { position: absolute; top: 1.5cqw; left: 50%; width: 22.06cqw; aspect-ratio: 64 / 9; transform: translateX(-50%); color: var(--bezel); }
   .notch svg { display: block; width: 100%; height: 100%; }
@@ -389,6 +389,11 @@
 (function () {
   'use strict';
   document.getElementById('year').textContent = new Date().getFullYear();
+  try { demo(); } catch (err) {
+    // Whatever the browser lacks, the page still reads; the MacBooks show the still wallpaper.
+    if (window.console) console.warn('Foldy demo disabled:', err);
+  }
+  function demo() {
 
   // ---------------------------------------------------------------------------
   // The fold, as the app renders it. The lid angle maps to fold progress the way
@@ -430,7 +435,9 @@
     g.font = '200 ' + Math.round(h * .22) + 'px -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, sans-serif';
     g.fillText('9:41', w / 2, h * .425);
     g.fillStyle = 'rgba(255,255,255,.7)';
-    var bw = w * .2, bh = h * .012; g.beginPath(); g.roundRect((w - bw) / 2, h * .943, bw, bh, bh / 2); g.fill();
+    var bw = w * .2, bh = h * .012;
+    if (g.roundRect) { g.beginPath(); g.roundRect((w - bw) / 2, h * .943, bw, bh, bh / 2); g.fill(); }
+    else { g.fillRect((w - bw) / 2, h * .943, bw, bh); }
     return c;
   }
 
@@ -675,7 +682,7 @@
     lidFold.set(progressFor(angle), STYLES[style]);
   }
 
-  var lastStyle = null;
+  var lastStyle = null, lastCurrent = -1;
   function frame() {
     if (!reduced) {
       current += (target - current) * 0.08;
@@ -686,7 +693,7 @@
       current = target; lidNow = lidTarget;
     }
     checkBend(current);
-    scrollFold.set(current);
+    if (current !== lastCurrent) { scrollFold.set(current); lastCurrent = current; }
     scrollFold.draw();
     if (lidNow !== paintLid.last || style !== lastStyle) { paintLid(lidNow); paintLid.last = lidNow; lastStyle = style; }
     lidFold.draw();
@@ -695,6 +702,7 @@
   paintLid(lidNow);
   requestAnimationFrame(frame);
   addEventListener('resize', function () { scrollFold.set(current); lidFold.set(progressFor(lidNow), STYLES[style]); });
+  }
 })();
 </script>
 </body>

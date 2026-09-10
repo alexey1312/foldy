@@ -69,6 +69,12 @@ public final class MacBookScene: @unchecked Sendable {
         fold.step()
     }
 
+    /// True once the lid and the fold have reached their targets; nothing will change
+    /// until a new target is set, so a view can stop redrawing.
+    public var isSettled: Bool {
+        lidAngle == targetLidAngle && fold.progress == fold.targetProgress
+    }
+
     public func step() {
         if smoothing >= 1 {
             lidAngle = targetLidAngle
@@ -188,8 +194,15 @@ public final class MacBookScene: @unchecked Sendable {
         let eye = SIMD3<Float>(0, 0.95, 3.6)
         let center = SIMD3<Float>(0, 0.5, 0.05)
         let view = simd_float4x4.lookAt(eye: eye, center: center, up: SIMD3(0, 1, 0))
-        // Wide enough that the open lid and the whole deck fit a 1.6:1 viewport with a little air.
-        let projection = simd_float4x4.perspective(fovyRadians: 24 * .pi / 180, aspect: viewportAspect, near: 0.1, far: 20)
+        // 24° vertical fits the open lid and the deck in a 1.56:1 viewport with a little
+        // air. Narrower viewports keep that horizontal extent instead, so the MacBook
+        // is never cropped at the sides (the app icon is square).
+        let baseFovy: Float = 24 * .pi / 180
+        let baseAspect: Float = 1.56
+        let fovy = viewportAspect >= baseAspect
+            ? baseFovy
+            : 2 * atan(tan(baseFovy / 2) * baseAspect / viewportAspect)
+        let projection = simd_float4x4.perspective(fovyRadians: fovy, aspect: viewportAspect, near: 0.1, far: 20)
         return Camera(viewProjection: projection * view, eye: SIMD4(eye, 1))
     }
 }

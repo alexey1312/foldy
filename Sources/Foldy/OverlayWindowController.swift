@@ -72,6 +72,12 @@ final class OverlayWindowController {
 
     // MARK: Source
 
+    /// Drops whatever the sheet shows; the next show waits for a fresh frame or wallpaper.
+    func clearSource() {
+        renderer.clearSource()
+        hasSampleSource = false
+    }
+
     func useSampleWallpaper() {
         let screen = Self.targetScreen()
         let scale = screen.backingScaleFactor
@@ -110,7 +116,6 @@ final class OverlayWindowController {
         isShown = false
         view.isPaused = true
         window.orderOut(nil)
-        hasSampleSource = false
         if let previousApp, previousApp != NSRunningApplication.current {
             previousApp.activate()
         }
