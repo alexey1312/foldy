@@ -871,11 +871,21 @@
     if (kind === 'standby') {
       g.fillStyle = '#000'; g.fillRect(0, 0, pw, ph);
       g.fillStyle = '#e4e6ea'; g.textAlign = 'center';
-      g.font = '700 ' + Math.round(ph * .34) + 'px -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, sans-serif';
-      g.fillText('9:41', pw * .5, ph * .55);
+      g.font = '700 ' + Math.round(ph * .3) + 'px -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, sans-serif';
+      g.fillText('9:41', pw * .5, ph * .34);
       g.fillStyle = '#9a9ca3';
-      g.font = '500 ' + Math.round(ph * .05) + 'px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif';
-      g.fillText('Wednesday, September 9', pw * .5, ph * .68);
+      g.font = '500 ' + Math.round(ph * .045) + 'px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif';
+      g.fillText('Wednesday, September 9', pw * .5, ph * .43);
+      // Widgets on the lower half.
+      g.fillStyle = '#1c1c20';
+      [[.08, .62, .4, .3], [.52, .62, .4, .3]].forEach(function (r) {
+        if (g.roundRect) { g.beginPath(); g.roundRect(pw * r[0], ph * r[1], pw * r[2], ph * r[3], 28); g.fill(); }
+        else g.fillRect(pw * r[0], ph * r[1], pw * r[2], ph * r[3]);
+      });
+      g.fillStyle = '#3a3a40'; g.textAlign = 'left';
+      g.font = '600 ' + Math.round(ph * .05) + 'px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif';
+      g.fillText('Alarm  6:30', pw * .12, ph * .74);
+      g.fillText('Sunny  21°', pw * .56, ph * .74);
     } else if (kind === 'split') {
       dunes(g, pw, ph, false);
       g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(pw * .5 - 2, 0, 4, ph);
@@ -1008,7 +1018,7 @@
     standing:   { title: 'Standing.', blurb: 'On a nightstand it stands on its edge and shows a clock, photos and widgets with StandBy.',
                   fold: 82,  turn: [['z', -90], ['x', -41]], cam: [-40, 110, 440], look: [0, 40, 0], shadow: 1, screen: 'standby', landscape: true },
     durability: { title: 'Durability.', blurb: 'A Grade 5 titanium frame and hinge cover, and a scratch-resistant coating over the inner display.',
-                  fold: 148, turn: [['y', 118], ['x', 12]], cam: [0, 30, 330], look: [0, 0, 0], shadow: 0, screen: 'lock', landscape: false }
+                  fold: 150, turn: [['y', 162], ['x', 10]], cam: [0, 30, 330], look: [0, 0, 0], shadow: 0, screen: 'lock', landscape: false }
   };
 
   function quatFor(steps) {
@@ -1100,6 +1110,7 @@
     }
     requestAnimationFrame(frame);
   }
+  window.foldyDuo = { setPose: setPose, poses: POSES, state: state };
   setPose('foldable');
   state.fold = state.foldTarget; state.quat.copy(state.quatTarget); state.cam.copy(state.camTarget); state.look.copy(state.lookTarget); state.shadow = state.shadowTarget;
   requestAnimationFrame(frame);
