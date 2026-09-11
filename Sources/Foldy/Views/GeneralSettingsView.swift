@@ -92,6 +92,22 @@ struct GeneralSettingsView: View {
                 }
             }
 
+            SettingsCard(title: "Updates") {
+                SettingsRow(title: "Check for updates automatically", subtitle: updatesSubtitle) {
+                    Toggle("", isOn: Binding(
+                        get: { controller.updater.automaticallyChecks },
+                        set: { controller.updater.automaticallyChecks = $0 }
+                    ))
+                    .labelsHidden().toggleStyle(.switch)
+                    .disabled(!controller.updater.isAvailable)
+                }
+                RowDivider()
+                SettingsRow(title: "Version \(appVersion)", subtitle: controller.updater.isAvailable ? "Updates come from GitHub Releases, signed with Sparkle's EdDSA key." : "Updates are available in the packaged app only.") {
+                    Button("Check Now") { controller.updater.checkForUpdates() }
+                        .disabled(!controller.updater.isAvailable)
+                }
+            }
+
             SettingsCard(title: "Pausing") {
                 SettingsRow(title: "Click the fold, or press Esc, to clear it until the lid opens again. Pause from the menu bar to switch Foldy off for a while.") {
                     EmptyView()
@@ -102,6 +118,18 @@ struct GeneralSettingsView: View {
             launchAtLogin = settings.launchAtLogin
             controller.refreshPermission()
         }
+    }
+
+    private var appVersion: String {
+        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "dev"
+    }
+
+    private var updatesSubtitle: String {
+        guard controller.updater.isAvailable else { return "Run Foldy.app to enable updates." }
+        if let last = controller.updater.lastCheck {
+            return "Last checked \(last.formatted(date: .abbreviated, time: .shortened))."
+        }
+        return "Not checked yet."
     }
 
     private var sensorTitle: String {

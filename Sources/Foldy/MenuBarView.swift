@@ -26,6 +26,11 @@ struct MenuBarView: View {
             Text("Settings…")
         }
         .keyboardShortcut(",")
+        if controller.updater.isAvailable {
+            Button("Check for Updates…") {
+                controller.updater.checkForUpdates()
+            }
+        }
         Button("Welcome Tour…") {
             controller.showOnboarding(step: 0)
         }

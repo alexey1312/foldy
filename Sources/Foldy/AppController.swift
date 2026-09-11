@@ -12,6 +12,8 @@ final class AppController {
     let settings = SettingsStore()
     let graphics: FoldGraphics?
     let graphicsError: String?
+    /// Sparkle. Dormant in screenshot runs and outside an app bundle.
+    let updater = Updater(enabled: !DevFlags.isScreenshotRun)
 
     @ObservationIgnored private let sensor = LidAngleSensor()
     @ObservationIgnored private let capture = DisplayCapture()

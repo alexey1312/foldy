@@ -12,6 +12,10 @@ let package = Package(
         .executable(name: "Foldy", targets: ["Foldy"]),
         .executable(name: "foldy-snapshot", targets: ["FoldySnapshot"]),
     ],
+    dependencies: [
+        // Sparkle ships its framework as a binary target; Scripts/bundle.sh embeds it in the app.
+        .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6"),
+    ],
     targets: [
         // Everything that does not need a window: the lid sensor, the display capture,
         // the Metal fold renderer, the 3D MacBook preview scene, the click sound.
@@ -29,11 +33,16 @@ let package = Package(
         // The menu bar app: overlay window, settings, menu.
         .executableTarget(
             name: "Foldy",
-            dependencies: ["FoldyCore"],
+            dependencies: [
+                "FoldyCore",
+                .product(name: "Sparkle", package: "Sparkle"),
+            ],
             linkerSettings: [
                 .linkedFramework("AppKit"),
                 .linkedFramework("SwiftUI"),
                 .linkedFramework("ServiceManagement"),
+                // Sparkle.framework lives in Foldy.app/Contents/Frameworks (see Scripts/bundle.sh).
+                .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"]),
             ]
         ),
         // Renders the fold (or the whole MacBook preview) to a PNG without a window.

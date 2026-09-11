@@ -39,6 +39,9 @@ and IOKit. No account, no license key, no network code.
 - **Menu bar.** Lives in the menu bar. Pause, Try It Now (folds the real desktop
   once, down and back up), Settings, Quit. Click the fold or press Esc to clear
   it until the lid opens again.
+- **Updates.** Sparkle checks GitHub Releases once a day (switch it off in
+  General). Each release is signed with an EdDSA key; the feed is
+  `site/appcast.xml` on GitHub Pages, written by the release workflow.
 
 ## Requirements
 
@@ -96,9 +99,23 @@ it and the DMG, and staples both, so the download opens without any warning.
 | `APP_STORE_CONNECT_KEY_ID` | from step 4 |
 | `APP_STORE_CONNECT_ISSUER_ID` | from step 4 |
 | `APP_STORE_CONNECT_KEY` | the contents of the `.p8` file |
+| `SPARKLE_PRIVATE_KEY` | the base64 EdDSA seed matching `SUPublicEDKey` (see Updates) |
 
 Locally, `CODESIGN_IDENTITY="Developer ID Application: Name (TEAMID)" make app`
 signs the same way; notarize with `xcrun notarytool` if you ship that build.
+
+### Updates (Sparkle)
+
+The app carries `SUFeedURL` and `SUPublicEDKey` in `Support/Info.plist`. With the
+secret `SPARKLE_PRIVATE_KEY` set (the base64 seed that pairs with that public key),
+the release workflow signs the zip, adds it to `site/appcast.xml`, commits the
+appcast to `main` and redeploys Pages. Without the secret the release still ships,
+but installed copies are not told about it.
+
+To rotate the key: generate a new pair (`openssl genpkey -algorithm ED25519`, the seed
+is the last 32 bytes of the PKCS#8 DER, the public key the last 32 bytes of the SPKI
+DER, both base64), put the public half in `Info.plist` and the seed in the secret.
+Sparkle's own `generate_keys` does the same and keeps the seed in the login keychain.
 
 ## Build and run
 

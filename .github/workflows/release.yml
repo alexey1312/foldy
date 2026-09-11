@@ -18,6 +18,8 @@ permissions:
 
 env:
   HAS_SIGNING: ${{ secrets.MACOS_CERTIFICATE_P12 != '' && secrets.APP_STORE_CONNECT_KEY != '' }}
+  HAS_SPARKLE: ${{ secrets.SPARKLE_PRIVATE_KEY != '' }}
+  SPARKLE_VERSION: 2.9.6
 
 jobs:
   release:
@@ -113,6 +115,40 @@ jobs:
 
       - name: Checksums
         run: (cd dist && shasum -a 256 Foldy-*.zip Foldy-*.dmg > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      # Sparkle: sign the zip with the EdDSA key, add it to the appcast and publish the
+      # appcast to GitHub Pages, so installed copies see this release.
+      - name: Update the appcast
+        if: env.HAS_SPARKLE == 'true'
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          curl -sSfL -o "$RUNNER_TEMP/Sparkle.tar.xz" "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz"
+          mkdir -p "$RUNNER_TEMP/sparkle" && tar -xf "$RUNNER_TEMP/Sparkle.tar.xz" -C "$RUNNER_TEMP/sparkle"
+          WORK="$RUNNER_TEMP/appcast"
+          mkdir -p "$WORK"
+          cp "dist/Foldy-$VERSION.zip" "$WORK/"
+          # Keep earlier items: start from the appcast that is live now.
+          curl -sSfL -o "$WORK/appcast.xml" https://alexey1312.github.io/foldy/appcast.xml || true
+          echo "$SPARKLE_PRIVATE_KEY" | "$RUNNER_TEMP/sparkle/bin/generate_appcast" \
+            --ed-key-file - \
+            --download-url-prefix "https://github.com/alexey1312/foldy/releases/download/$GITHUB_REF_NAME/" \
+            --link "https://alexey1312.github.io/foldy/" \
+            --maximum-versions 6 \
+            "$WORK"
+          cat "$WORK/appcast.xml"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --depth 1 origin main
+          git checkout -B main origin/main
+          cp "$WORK/appcast.xml" site/appcast.xml
+          git add site/appcast.xml
+          git commit -m "Appcast: Foldy $VERSION"
+          git push origin main
+          # A push made with GITHUB_TOKEN starts no workflow on its own; ask Pages to deploy.
+          gh workflow run pages.yml --ref main
 
       - name: Publish the release
         env:
