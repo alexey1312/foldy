@@ -221,20 +221,26 @@ jobs:
           command cp -f "$WORK/appcast.xml" site/appcast.xml
           git add site/appcast.xml
           git commit -m "Appcast: Foldy $VERSION"
-          # main may have moved since the fetch; rebase onto it rather than failing after
-          # the build has already been paid for.
+          # main may have moved since the fetch. The checkout is shallow, so rebuild the
+          # commit on top of the new main rather than rebasing across history we do not
+          # have — this is one generated file, and the generator has already run.
+          pushed=false
           for attempt in 1 2 3 4 5; do
             if git push origin main; then
+              pushed=true
               break
             fi
-            echo "push rejected, rebasing (attempt $attempt)"
+            echo "push rejected, rebuilding the commit on the new main (attempt $attempt)"
             git fetch --depth 1 origin main
-            git rebase origin/main || { git rebase --abort; exit 1; }
-            if [ "$attempt" = "5" ]; then
-              echo "::error::Could not push the appcast after five attempts."
-              exit 1
-            fi
+            git checkout -B main origin/main
+            command cp -f "$WORK/appcast.xml" site/appcast.xml
+            git add site/appcast.xml
+            git commit -m "Appcast: Foldy $VERSION" || break   # already there: nothing to push
           done
+          if [ "$pushed" != "true" ] && ! git diff --quiet HEAD origin/main -- site/appcast.xml; then
+            echo "::error::Could not push the appcast after five attempts."
+            exit 1
+          fi
 
       - name: Make the release public
         env:
@@ -249,7 +255,16 @@ jobs:
           # A push made with GITHUB_TOKEN starts no workflow on its own; ask Pages to
           # deploy, then wait for the run so a failed deploy fails this job rather than
           # leaving the feed stale behind a green tick.
+          BEFORE="$(gh run list --workflow pages.yml --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
           gh workflow run pages.yml --ref main
-          sleep 15
-          RUN_ID="$(gh run list --workflow pages.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+          RUN_ID="$BEFORE"
+          for _ in $(seq 1 20); do
+            sleep 5
+            RUN_ID="$(gh run list --workflow pages.yml --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
+            [ "$RUN_ID" != "$BEFORE" ] && break
+          done
+          if [ "$RUN_ID" = "$BEFORE" ]; then
+            echo "::error::The Pages deploy never started; the appcast is committed but not published."
+            exit 1
+          fi
           gh run watch "$RUN_ID" --exit-status
