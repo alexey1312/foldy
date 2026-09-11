@@ -114,8 +114,14 @@ jobs:
           xcrun stapler staple "dist/Foldy-$VERSION.dmg"
           rm -f "$RUNNER_TEMP/AuthKey.p8"
 
+      # The site's download button links to releases/latest/download/Foldy.dmg, which
+      # resolves only on an asset whose name never changes; copy the stapled DMG after
+      # notarization so the copy carries the ticket too.
+      - name: A stable DMG name for the site's download button
+        run: command cp -f "dist/Foldy-${GITHUB_REF_NAME#v}.dmg" dist/Foldy.dmg
+
       - name: Checksums
-        run: (cd dist && shasum -a 256 Foldy-*.zip Foldy-*.dmg > SHA256SUMS.txt && cat SHA256SUMS.txt)
+        run: (cd dist && shasum -a 256 Foldy-*.zip Foldy*.dmg > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
       - name: Publish the release
         env:

@@ -56,8 +56,9 @@ lid still works: the settings preview, the style thumbnails and *Try It Now*.
 
 ## Install
 
-Grab `Foldy-x.y.z.dmg` or the zip from the
-[releases page](https://github.com/alexey1312/foldy/releases) and drag Foldy to
+Download the [latest DMG](https://github.com/alexey1312/foldy/releases/latest/download/Foldy.dmg)
+— or take `Foldy-x.y.z.dmg`, the zip or the checksums from the
+[releases page](https://github.com/alexey1312/foldy/releases) — and drag Foldy to
 Applications. The build is ad-hoc signed, not notarized, so macOS blocks the first
 launch: open it once, then go to System Settings › Privacy & Security, scroll to the
 message about Foldy and click **Open Anyway**. Or clear the quarantine flag first:
