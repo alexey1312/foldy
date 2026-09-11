@@ -107,14 +107,17 @@ grey — they are AppKit's and out of reach.
   say. On macOS the tint reaches the label too, so the title disappears in the window
   that has focus. `.glassProminent` ignores a tint outright, explicit `.tint(.accentColor)`
   included, and draws white in the light appearance: the same as plain `.glass` beside
-  it. The accent-coloured primary is `ProminentGlassButtonStyle` in `LiquidGlass.swift`
-  (`glassEffect(.regular.tint(.accentColor).interactive())` on the label); use
-  `glassButtonStyle(.prominent)` and never reach for `.glassProminent` directly.
-- Every hidden-label `Toggle` carries its row title as the label: `Toggle("Sound", isOn:)`
-  plus `.labelsHidden()`. `Toggle("", isOn:)` reads to VoiceOver as a nameless switch.
-- Motion that is decoration checks `@Environment(\.accessibilityReduceMotion)`: the tour's
-  step slide and lid loop, the slider thumb, the chip text. The Metal preview following a
-  drag is feedback, not decoration, and stays.
+  it. `Glass.tint` on `.regular` or `.clear` is a faint wash, and `.regular` glass over an
+  accent capsule whitens it to pale cyan. The accent-coloured primary is therefore
+  `ProminentGlassButtonStyle` in `LiquidGlass.swift`: `.clear.interactive()` glass over
+  `Capsule().fill(.accentColor)`. Use `glassButtonStyle(.prominent)`; never reach for
+  `.glassProminent` directly.
+- A switch in a settings row is `SettingsToggleRow`, which gives the `Toggle` the row's
+  title and hides it. `Toggle("", isOn:)` reads to VoiceOver as a nameless switch.
+- Motion that is decoration goes through `decorativeAnimation(_:value:)`, which is off
+  under Reduce Motion; the tour's slide and lid loop and the previews' easing
+  (`MacBookPreviewView(immediate:)`) read the environment directly. The Metal preview
+  following a drag is feedback, not decoration, and stays.
 - `.navigationSplitViewColumnWidth` has to come after `.safeAreaInset` on the sidebar;
   the other way round the preference is swallowed and the column collapses.
 - The split view hands itself a sidebar toggle. With no toolbar to hold it, it lands
@@ -138,7 +141,8 @@ grey — they are AppKit's and out of reach.
   starts no workflow by itself, hence `gh workflow run pages.yml`).
 - The site and the Sparkle feed live on `https://foldy.proteinunit.dev/`
   (`site/CNAME` + Settings › Pages, Cloudflare DNS-only CNAME). `SUFeedURL`,
-  the `--link` in `release.yml` and `site/CNAME` must name the same host.
+  the `--link` in `release.yml`, `site/CNAME` and `Links.site` in `AboutView.swift` must
+  name the same host.
 - To re-run a failed tag after a fix, move the tag: `git tag -d v && git push
   origin :refs/tags/v && git tag -a v && git push origin v`.
 - Secrets are listed in README › Signing. Never print, commit or move them; the

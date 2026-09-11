@@ -69,7 +69,7 @@ struct OnboardingView: View {
 
     /// The steps the eyebrows count, "Step 1 of 4": the welcome screen is the cover,
     /// not a step, so it gets no dot and shows none.
-    private static let countedSteps = Step.allCases.filter { $0 != .welcome }
+    static let countedSteps = Array(Step.allCases.dropFirst())
 
     private var footer: some View {
         HStack(spacing: 14) {
@@ -79,11 +79,11 @@ struct OnboardingView: View {
                         Capsule()
                             .fill(s == step ? Color.primary : Color.primary.opacity(0.18))
                             .frame(width: s == step ? 22 : 7, height: 7)
-                            .animation(reduceMotion ? nil : .spring(duration: 0.35), value: step)
+                            .decorativeAnimation(.spring(duration: 0.35), value: step)
                     }
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Step \(step.rawValue) of \(Self.countedSteps.count)")
+                .accessibilityLabel(step.eyebrow)
             }
             Spacer()
             GlassGroup(spacing: 14) {
@@ -105,8 +105,10 @@ struct OnboardingView: View {
                         // Skipping the permission is the way out, not the point of the
                         // step; the prominent button on that screen is Allow Screen
                         // Recording, inside the card.
+                        // Return goes with the prominence: while skipping is the
+                        // fallback, the default action is the Allow button in the card.
                         Button(continueTitle) { go(1) }
-                            .keyboardShortcut(.defaultAction)
+                            .keyboardShortcut(isSkipping ? nil : .defaultAction)
                             .glassButtonStyle(isSkipping ? .standard : .prominent)
                             .glassMorphID("forward", in: footerGlass)
                             .disabled(step == .capture && controller.needsRelaunchForPermission)
@@ -141,16 +143,26 @@ struct OnboardingView: View {
     }
 }
 
+extension OnboardingView.Step {
+    /// "Step 2 of 4", from the position among the counted steps; the dots and the
+    /// eyebrows read the same number.
+    var eyebrow: String {
+        let counted = OnboardingView.countedSteps
+        let index = counted.firstIndex(of: self).map { $0 + 1 } ?? 0
+        return "Step \(index) of \(counted.count)"
+    }
+}
+
 // MARK: - Shared pieces
 
 private struct StepTitle: View {
-    let eyebrow: String
+    let step: OnboardingView.Step
     let title: String
     let text: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(eyebrow.uppercased())
+            Text(step.eyebrow.uppercased())
                 .font(.system(size: 12, weight: .semibold))
                 .tracking(0.6)
                 .foregroundStyle(.secondary)
@@ -210,25 +222,19 @@ private struct WelcomeStep: View {
     var body: some View {
         VStack(spacing: 22) {
             if let graphics = controller.graphics {
-                Group {
-                    if reduceMotion {
-                        // A still of the lid part-way down says what the loop says.
-                        MacBookPreviewView(
-                            graphics: graphics,
-                            lidAngle: controller.settings.curve.angle(forFraction: 0.6),
-                            parameters: controller.settings.parameters,
-                            curve: controller.settings.curve
-                        )
-                    } else {
-                        TimelineView(.periodic(from: start, by: 1.0 / 30.0)) { context in
-                            MacBookPreviewView(
-                                graphics: graphics,
-                                lidAngle: demoAngle(at: context.date.timeIntervalSince(start)),
-                                parameters: controller.settings.parameters,
-                                curve: controller.settings.curve
-                            )
-                        }
-                    }
+                // Under Reduce Motion the timeline pauses and the lid sits halfway, the
+                // same position as the Halfway pill in Settings: a still that says what
+                // the loop says.
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { context in
+                    MacBookPreviewView(
+                        graphics: graphics,
+                        lidAngle: reduceMotion
+                            ? AppearanceSettingsView.Chip.halfway.angle(curve: controller.settings.curve)
+                            : demoAngle(at: context.date.timeIntervalSince(start)),
+                        parameters: controller.settings.parameters,
+                        curve: controller.settings.curve,
+                        immediate: reduceMotion
+                    )
                 }
                 .frame(height: 300)
             }
@@ -252,7 +258,7 @@ private struct LidStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 28) {
-            StepTitle(eyebrow: "Step 1 of 4", title: "Your lid, measured.",
+            StepTitle(step: .lid, title: "Your lid, measured.",
                       text: "MacBooks since 2019 carry a sensor that reports the hinge angle. Foldy reads it straight from the Mac, with no polling while the lid rests and no accessibility tricks.")
             HStack(alignment: .top, spacing: 28) {
                 LidGauge(angle: controller.sensorAvailable ? controller.lidAngle : FoldCurve.fullyOpenAngle,
@@ -285,7 +291,6 @@ private struct LidGauge: View {
     let angle: Double
     let curve: FoldCurve
     let live: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Canvas { context, size in
@@ -322,7 +327,7 @@ private struct LidGauge: View {
             let label = Text("\(Int(angle.rounded()))°").font(.system(size: 26, weight: .semibold).monospacedDigit())
             context.draw(label, at: CGPoint(x: size.width * 0.78, y: size.height * 0.22))
         }
-        .animation(reduceMotion ? nil : .spring(duration: 0.35), value: angle)
+        .decorativeAnimation(.spring(duration: 0.35), value: angle)
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.quaternary.opacity(0.4)))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Lid angle")
@@ -336,7 +341,7 @@ private struct CaptureStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 28) {
-            StepTitle(eyebrow: "Step 2 of 4", title: "Let Foldy see the screen.",
+            StepTitle(step: .capture, title: "Let Foldy see the screen.",
                       text: "To fold the real desktop Foldy captures the display with ScreenCaptureKit. Frames go straight to the GPU on this Mac; nothing is recorded, saved or sent anywhere. Without it Foldy folds a sample wallpaper instead.")
             VStack(alignment: .leading, spacing: 18) {
                 if controller.needsRelaunchForPermission {
@@ -349,6 +354,7 @@ private struct CaptureStep: View {
                     } label: {
                         Label("Relaunch Foldy", systemImage: "arrow.clockwise")
                     }
+                    .keyboardShortcut(.defaultAction)
                     .glassButtonStyle(.prominent)
                     .controlSize(.large)
                 } else if controller.hasScreenPermission {
@@ -363,6 +369,7 @@ private struct CaptureStep: View {
                             } label: {
                                 Label("Allow Screen Recording", systemImage: "rectangle.dashed.badge.record")
                             }
+                            .keyboardShortcut(.defaultAction)
                             .glassButtonStyle(.prominent)
                             .controlSize(.large)
                             Button("Open System Settings…") { controller.openScreenRecordingSettings() }
@@ -388,7 +395,7 @@ private struct StyleStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            StepTitle(eyebrow: "Step 3 of 4", title: "Pick a fold.",
+            StepTitle(step: .style, title: "Pick a fold.",
                       text: "Three looks, all tunable later in Settings. Try It Now runs the fold once on the real display, down and back up.")
             HStack(spacing: 16) {
                 ForEach(FoldStyle.allCases) { style in
@@ -428,7 +435,7 @@ private struct DoneStep: View {
     var body: some View {
         @Bindable var settings = controller.settings
         VStack(alignment: .leading, spacing: 26) {
-            StepTitle(eyebrow: "Step 4 of 4", title: "That's it. Foldy lives in the menu bar.",
+            StepTitle(step: .done, title: "That's it. Foldy lives in the menu bar.",
                       text: "Close the lid and the desktop folds; open it and the desktop clears with a soft click. Click the fold or press Esc to wave it off until the lid opens again.")
             HStack(spacing: 14) {
                 HStack(spacing: 10) {
@@ -441,21 +448,17 @@ private struct DoneStep: View {
                 Text("the menu bar icon").font(.system(size: 13)).foregroundStyle(.secondary)
             }
             SettingsCard {
-                SettingsRow(title: "Launch at login") {
-                    Toggle("Launch at login", isOn: $launchAtLogin).labelsHidden().toggleStyle(.switch)
-                        .onChange(of: launchAtLogin) { _, enabled in
-                            guard enabled != settings.launchAtLogin else { return }
-                            do { try settings.setLaunchAtLogin(enabled); launchError = nil }
-                            catch { launchError = error.localizedDescription; launchAtLogin = settings.launchAtLogin }
-                        }
-                }
+                SettingsToggleRow(title: "Launch at login", isOn: $launchAtLogin)
+                    .onChange(of: launchAtLogin) { _, enabled in
+                        guard enabled != settings.launchAtLogin else { return }
+                        do { try settings.setLaunchAtLogin(enabled); launchError = nil }
+                        catch { launchError = error.localizedDescription; launchAtLogin = settings.launchAtLogin }
+                    }
                 if let launchError {
                     Text(launchError).font(.system(size: 12)).foregroundStyle(.red).padding(.horizontal, 16).padding(.bottom, 10)
                 }
                 RowDivider()
-                SettingsRow(title: "Sound", subtitle: "A soft click when the lid opens and the desktop clears.") {
-                    Toggle("Sound", isOn: $settings.soundEnabled).labelsHidden().toggleStyle(.switch)
-                }
+                SettingsToggleRow(title: "Sound", subtitle: "A soft click when the lid opens and the desktop clears.", isOn: $settings.soundEnabled)
             }
         }
         .onAppear { launchAtLogin = settings.launchAtLogin }

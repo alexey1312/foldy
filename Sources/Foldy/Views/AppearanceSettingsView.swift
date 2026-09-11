@@ -3,10 +3,17 @@ import SwiftUI
 
 struct AppearanceSettingsView: View {
     var controller: AppController
-    @State private var selectedChip: Chip?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var settings: SettingsStore { controller.settings }
+
+    /// The pill whose angle the preview is at, if any. Derived, not stored: the slider,
+    /// the Angles card and the lid can all move the preview, and each would have had to
+    /// remember to clear a stored selection.
+    private var selectedChip: Chip? {
+        guard !followsLid else { return nil }
+        return Chip.allCases.first { abs($0.angle(curve: settings.curve) - settings.previewAngle) <= 0.5 }
+    }
 
     var body: some View {
         @Bindable var settings = settings
@@ -20,19 +27,17 @@ struct AppearanceSettingsView: View {
                     .font(.system(size: 15))
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
-                    .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: selectedChip)
+                    .decorativeAnimation(.easeOut(duration: 0.2), value: selectedChip)
                 Text(dragHint)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
 
-            // The pills move the preview and nothing else. The style, which is a saved
-            // setting, is chosen from the thumbnails below; it used to be in this row too,
-            // in the same pill as a lid position, and the two read as one kind of thing.
-            // One container for the three: glass cannot sample glass, so without it each
-            // one opens a backdrop of its own and they stop matching.
+            // The pills move the preview and nothing else; the style, a saved setting,
+            // is chosen from the thumbnails below. One container for the three: glass
+            // cannot sample glass, so without it each opens a backdrop of its own.
             GlassGroup(spacing: 10) {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
                     ForEach(Chip.allCases) { chip in
                         ChipButton(title: chip.title, selected: selectedChip == chip) {
                             select(chip)
@@ -54,6 +59,10 @@ struct AppearanceSettingsView: View {
                         }
                     }
                 }
+                Text(settings.style.summary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 4)
             }
 
             SettingsCard(title: settings.parametersAreCustom ? "\(settings.style.title), tuned" : settings.style.title) {
@@ -100,7 +109,8 @@ struct AppearanceSettingsView: View {
                     graphics: graphics,
                     lidAngle: controller.previewAngle,
                     parameters: settings.parameters,
-                    curve: settings.curve
+                    curve: settings.curve,
+                    immediate: reduceMotion
                 )
                 .frame(height: 320)
             } else {
@@ -124,11 +134,6 @@ struct AppearanceSettingsView: View {
                 HStack(spacing: 14) {
                     FoldSlider(value: $settings.previewAngle, range: 0...FoldCurve.fullyOpenAngle)
                         .disabled(followsLid)
-                        .onChange(of: settings.previewAngle) { _, angle in
-                            if let chip = selectedChip, abs(chip.angle(curve: settings.curve) - angle) > 0.5 {
-                                selectedChip = nil
-                            }
-                        }
                     Text("\(Int(controller.previewAngle.rounded()))°")
                         .font(.system(size: 14, weight: .medium).monospacedDigit())
                         .frame(width: 44, alignment: .trailing)
@@ -166,7 +171,6 @@ struct AppearanceSettingsView: View {
     }
 
     private func select(_ chip: Chip) {
-        selectedChip = chip
         if followsLid { settings.previewFollowsLid = false }
         settings.previewAngle = chip.angle(curve: settings.curve)
     }
@@ -242,9 +246,12 @@ struct StyleCard: View {
                     if let graphics = controller.graphics {
                         FoldThumbnailView(graphics: graphics, parameters: controller.settings.parameters(for: style))
                     } else {
-                        Color.black
+                        Color.clear
                     }
                 }
+                // The stage under the transparent thumbnail: a shade off the pane in
+                // either appearance, so the sheet reads against it in both.
+                .background(Color.primary.opacity(0.06))
                 .aspectRatio(MacBookScene.screenAspect, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -295,9 +302,9 @@ struct AngleRow: View {
             HStack(spacing: 16) {
                 Text(title)
                     .frame(width: 120, alignment: .leading)
-                // Whole degrees, but rounded on the way in rather than with `step:`,
-                // which on macOS draws a tick for every step: seventy of them here.
-                Slider(value: Binding(get: { value }, set: { value = $0.rounded() }), in: range)
+                // No `step:`: on macOS it draws a tick for every step, seventy of them
+                // here. The angle is a Double all the way down and the label rounds.
+                Slider(value: $value, in: range)
                 Text("\(Int(value.rounded()))°")
                     .font(.system(size: 13).monospacedDigit())
                     .foregroundStyle(.secondary)

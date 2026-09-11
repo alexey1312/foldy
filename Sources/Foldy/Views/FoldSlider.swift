@@ -40,7 +40,7 @@ struct FoldSlider: View {
                 .frame(width: thumbSize, height: thumbSize)
                 .scaleEffect(dragging && !reduceMotion ? 1.08 : 1)
                 .offset(x: x)
-                .animation(reduceMotion ? nil : .spring(duration: 0.25), value: dragging)
+                .decorativeAnimation(.spring(duration: 0.25), value: dragging)
             }
             .contentShape(Rectangle())
             .gesture(

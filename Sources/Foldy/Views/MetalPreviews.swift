@@ -8,6 +8,9 @@ struct MacBookPreviewView: NSViewRepresentable {
     var lidAngle: Double
     var parameters: FoldParameters
     var curve: FoldCurve
+    /// Put the lid at `lidAngle` at once instead of easing there: the Reduce Motion
+    /// path, where the swing from wherever the lid was is the motion being avoided.
+    var immediate = false
 
     func makeCoordinator() -> Coordinator {
         Coordinator(graphics: graphics)
@@ -29,10 +32,14 @@ struct MacBookPreviewView: NSViewRepresentable {
     }
 
     func updateNSView(_ view: SceneMetalView, context: Context) {
-        let scene = context.coordinator.scene
-        scene?.targetLidAngle = lidAngle
-        scene?.fold.parameters = parameters
-        scene?.curve = curve
+        guard let scene = context.coordinator.scene else { return }
+        scene.fold.parameters = parameters
+        scene.curve = curve
+        if immediate {
+            scene.lidAngleJump(to: lidAngle)
+        } else {
+            scene.targetLidAngle = lidAngle
+        }
         view.isPaused = false
         view.needsDisplay = true
     }
@@ -75,6 +82,9 @@ final class SceneMetalView: MTKView {
 }
 
 /// A still of the fold at 80 %, for the style cards. Redraws only when its parameters change.
+///
+/// Transparent, like the MacBook preview: the stage it sits on is whatever SwiftUI puts
+/// behind it, so the card follows the appearance and the no-Metal fallback shares it.
 struct FoldThumbnailView: NSViewRepresentable {
     let graphics: FoldGraphics
     var parameters: FoldParameters
@@ -88,8 +98,11 @@ struct FoldThumbnailView: NSViewRepresentable {
         view.renderer = context.coordinator.renderer
         view.commandQueue = graphics.commandQueue
         view.colorPixelFormat = FoldGraphics.pixelFormat
+        view.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         view.isPaused = true
         view.enableSetNeedsDisplay = true
+        view.layer?.isOpaque = false
+        (view.layer as? CAMetalLayer)?.isOpaque = false
         return view
     }
 
@@ -122,25 +135,11 @@ final class ThumbnailMetalView: MTKView {
     var renderer: FoldRenderer?
     var commandQueue: MTLCommandQueue?
 
-    /// The stage the folded sheet sits on. It follows the window's appearance: a dark
-    /// stage in a light window was three black slabs in an otherwise pale pane.
-    private var stageColor: MTLClearColor {
-        let dark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-        return dark
-            ? MTLClearColor(red: 0.07, green: 0.07, blue: 0.075, alpha: 1)
-            : MTLClearColor(red: 0.86, green: 0.865, blue: 0.885, alpha: 1)
-    }
-
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        needsDisplay = true
-    }
-
     override func draw(_ dirtyRect: NSRect) {
         guard let renderer, let commandQueue, let drawable = currentDrawable,
               let commandBuffer = commandQueue.makeCommandBuffer() else { return }
         renderer.step()
-        renderer.encode(into: commandBuffer, target: drawable.texture, clearColor: stageColor)
+        renderer.encode(into: commandBuffer, target: drawable.texture, clearColor: clearColor)
         commandBuffer.present(drawable)
         commandBuffer.commit()
     }

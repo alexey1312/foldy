@@ -29,21 +29,27 @@ extension View {
     /// monochrome capsule: white on a light window, near-white on a dark one. In the
     /// light appearance that is the same colour as the plain `.glass` next to it, so the
     /// one action a screen is about looked no heavier than its neighbour. Prominent is
-    /// therefore ``ProminentGlassButtonStyle``: the same glass, tinted with the accent,
-    /// the way `.borderedProminent` has always been.
+    /// therefore ``ProminentGlassButtonStyle``: clear glass over an accent capsule,
+    /// the colour `.borderedProminent` has always carried.
     @ViewBuilder
-    func glassButtonStyle(_ prominence: GlassButtonProminence = .standard, tint: Color? = nil) -> some View {
+    func glassButtonStyle(_ prominence: GlassButtonProminence = .standard) -> some View {
         if #available(macOS 26.0, *) {
             switch prominence {
-            case .standard: buttonStyle(.glass).tint(tint)
-            case .prominent: buttonStyle(ProminentGlassButtonStyle(tint: tint ?? .accentColor))
+            case .standard: buttonStyle(.glass)
+            case .prominent: buttonStyle(ProminentGlassButtonStyle())
             }
         } else {
             switch prominence {
-            case .standard: buttonStyle(.bordered).tint(tint)
-            case .prominent: buttonStyle(.borderedProminent).tint(tint)
+            case .standard: buttonStyle(.bordered)
+            case .prominent: buttonStyle(.borderedProminent)
             }
         }
+    }
+
+    /// `.animation(_:value:)` for motion that only decorates: off under Reduce Motion.
+    /// Motion that is feedback for a drag or a press is not decoration and stays.
+    func decorativeAnimation<V: Equatable>(_ animation: Animation, value: V) -> some View {
+        modifier(DecorativeAnimation(animation: animation, value: value))
     }
 
     /// Glass in `shape` on Tahoe; before it, the material that stood in for it, with a
@@ -71,56 +77,54 @@ extension View {
     }
 }
 
-/// The accent-coloured primary button: a capsule of `tint` with clear Liquid Glass
-/// over it, so the colour is the backdrop the glass refracts. `Glass.tint` alone was
-/// tried first and came out as a faint wash on macOS, no heavier than plain glass;
-/// `.regular` over the capsule whitened the accent to a pale cyan in the light
-/// appearance. `.clear` leaves the colour alone and keeps the rim, the highlight and
-/// `.interactive()`'s response to the pointer. Sized to sit beside `.glass` buttons
-/// of the same `controlSize`.
+private struct DecorativeAnimation<V: Equatable>: ViewModifier {
+    let animation: Animation
+    let value: V
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content.animation(reduceMotion ? nil : animation, value: value)
+    }
+}
+
+/// The accent-coloured primary button: a capsule of the accent with clear Liquid Glass
+/// over it, so the colour is the backdrop the glass refracts. `Glass.tint` was tried
+/// first, on `.regular` and on `.clear`, and came out as a faint wash on macOS, no
+/// heavier than plain glass; `.regular` over the capsule whitened the accent to a pale
+/// cyan in the light appearance. `.clear` leaves the colour alone and keeps the rim,
+/// the highlight and `.interactive()`'s response to the pointer.
+///
+/// The insets follow what `.glass` draws for each `controlSize`, measured from the
+/// window images, so a prominent button sits level with the plain ones beside it.
 @available(macOS 26.0, *)
 struct ProminentGlassButtonStyle: ButtonStyle {
-    var tint: Color
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.controlSize) private var controlSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: fontSize, weight: .medium))
+        let m = metrics
+        return configuration.label
+            .font(.system(size: m.font, weight: .medium))
             .foregroundStyle(.white)
-            .padding(.horizontal, horizontalPadding)
-            .frame(minHeight: height)
+            .padding(.horizontal, m.horizontal)
+            .padding(.vertical, m.vertical)
             .contentShape(.capsule)
+            .contentShape(.focusEffect, Capsule())
             .glassEffect(.clear.interactive(), in: .capsule)
-            .background(Capsule().fill(tint))
+            .background(Capsule().fill(Color.accentColor))
             .opacity(isEnabled ? 1 : 0.45)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
     }
 
-    private var height: CGFloat {
+    /// Label size and the insets around it, per control size.
+    private var metrics: (font: CGFloat, horizontal: CGFloat, vertical: CGFloat) {
         switch controlSize {
-        case .mini: 18
-        case .small: 20
-        case .large, .extraLarge: 32
-        default: 24
-        }
-    }
-
-    private var horizontalPadding: CGFloat {
-        switch controlSize {
-        case .mini, .small: 9
-        case .large, .extraLarge: 16
-        default: 12
-        }
-    }
-
-    private var fontSize: CGFloat {
-        switch controlSize {
-        case .mini: 9
-        case .small: 11
-        case .large, .extraLarge: 15
-        default: 13
+        case .mini: (9, 8, 2)
+        case .small: (11, 9, 3)
+        case .large, .extraLarge: (15, 16, 6.5)
+        default: (13, 12, 5)
         }
     }
 }

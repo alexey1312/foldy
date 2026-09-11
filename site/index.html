@@ -288,30 +288,20 @@
     border-radius: 999px; color: var(--ink);
     text-decoration: none; font-size: 13px; font-weight: 500; letter-spacing: -0.01em;
     --glass-blur: 12px; --hl-size: 110px;
-    transition: transform .15s cubic-bezier(.2, 0, 0, 1);
   }
-  .pill:hover { transform: translateY(-1px); }
 
   /* Top right: the bend counter and the sound switch. Hidden on a phone, where a
      fixed pill sits on top of the text and there is no scroll-bend sound to switch. */
   .hud { position: fixed; top: 26px; right: 28px; z-index: 20; display: flex; align-items: center; gap: 8px; }
+  .hud > * { display: inline-flex; align-items: center; height: 34px; margin: 0; border-radius: 999px; color: var(--ink); --glass-blur: 14px; }
   .bend-counter {
-    display: inline-flex; align-items: center; gap: 6px;
-    height: 34px; padding: 0 14px; margin: 0;
-    border-radius: 999px; color: var(--ink);
+    gap: 6px; padding: 0 14px;
     font-size: 13px; letter-spacing: -0.01em; pointer-events: none;
     font-variant-numeric: tabular-nums;
-    --glass-blur: 14px;
   }
   .bend-counter strong { font-weight: 600; }
   .bend-counter::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #5e8f6a; margin-right: 3px; }
-  .sound {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%;
-    color: var(--ink); cursor: pointer; --glass-blur: 14px; --hl-size: 90px;
-    transition: transform .15s cubic-bezier(.2, 0, 0, 1);
-  }
-  .sound:hover { transform: translateY(-1px); }
+  .sound { justify-content: center; width: 34px; padding: 0; border: 0; cursor: pointer; --hl-size: 90px; }
   .sound svg { position: relative; z-index: 1; width: 17px; height: 17px; }
   .sound .off { display: none; }
   .sound[aria-pressed="false"] { color: var(--muted); }
@@ -330,14 +320,10 @@
   .actions { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 72px; }
   .purchase-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 
-  /* The one primary action on the page: accent-tinted glass, the same material the
-     pressed chip and the app's prominent buttons use, so "primary" means one colour
-     on the site and in Settings alike. */
-  .button {
-    display: inline-flex; align-items: center; gap: 10px;
-    height: 46px; padding: 0 7px 0 20px; border-radius: 999px;
-    color: var(--accent-ink); text-decoration: none;
-    font-size: 15.5px; font-weight: 600; letter-spacing: -0.018em;
+  /* Accent glass: the one material for "primary", on the download button here, the
+     pressed chip below and the app's prominent buttons, so primary means one colour on
+     the site and in Settings alike. */
+  .button, .chip[aria-pressed="true"] {
     --glass-tint: var(--accent-deep);
     --glass-solid: var(--accent-deep);
     --glass-sheen: rgba(255, 255, 255, .30);
@@ -345,13 +331,24 @@
     --glass-rim: rgba(255, 255, 255, .55);
     --glass-rim-dark: rgba(0, 0, 0, .34);
     --hl: rgba(255, 255, 255, .22);
+    color: var(--accent-ink);
+  }
+  /* Controls lift a pixel under the pointer and settle on press. */
+  .pill, .button, .chip, .sound { transition: transform .15s cubic-bezier(.2, 0, 0, 1); }
+  .pill:hover, .button:hover, .chip:hover, .sound:hover { transform: translateY(-1px); }
+  .button:active, .chip:active { transform: translateY(0) scale(.985); }
+
+  .button {
+    display: inline-flex; align-items: center; gap: 10px;
+    height: 46px; padding: 0 7px 0 20px; border-radius: 999px;
+    text-decoration: none;
+    font-size: 15.5px; font-weight: 600; letter-spacing: -0.018em;
     --hl-size: 180px;
     --band: 14px;
     --glass-blur: 18px;
     transition: transform .15s cubic-bezier(.2, 0, 0, 1), box-shadow .2s cubic-bezier(.2, 0, 0, 1);
   }
-  .button:hover { transform: translateY(-1px); box-shadow: var(--glass-depth), 0 12px 26px -16px rgba(0, 70, 170, .55); }
-  .button:active { transform: translateY(0) scale(.985); }
+  .button:hover { box-shadow: var(--glass-depth), 0 12px 26px -16px rgba(0, 70, 170, .55); }
   .button .amount {
     position: relative; z-index: 1;
     display: inline-flex; align-items: center; height: 32px; padding: 0 12px;
@@ -492,20 +489,9 @@
     transition: transform .15s cubic-bezier(.2, 0, 0, 1), background-color .2s cubic-bezier(.2, 0, 0, 1), color .2s cubic-bezier(.2, 0, 0, 1);
   }
   .chip > * { position: relative; z-index: 1; }
-  .chip:hover { transform: translateY(-1px); }
-  .chip:active { transform: translateY(0) scale(.98); }
   .chip svg { width: 19px; height: 19px; flex-shrink: 0; }
   .chip .on { display: none; }
-  .chip[aria-pressed="true"] {
-    --glass-tint: var(--accent-deep);
-    --glass-solid: var(--accent-deep);
-    --glass-sheen: rgba(255, 255, 255, .30);
-    --glass-sheen-2: rgba(0, 0, 0, .22);
-    --glass-rim: rgba(255, 255, 255, .55);
-    --glass-rim-dark: rgba(0, 0, 0, .34);
-    --hl: rgba(255, 255, 255, .22);
-    color: var(--accent-ink);
-  }
+  /* The pressed chip's material is the accent glass rule above, beside .button. */
   .chip[aria-pressed="true"] .off { display: none; }
   .chip[aria-pressed="true"] .on { display: block; }
 
@@ -594,7 +580,7 @@
   <div class="actions">
     <div class="purchase-row">
       <a class="button glass refract" href="https://github.com/alexey1312/foldy/releases/latest/download/Foldy.dmg">Download Foldy<span class="amount">Free</span></a>
-      <p class="note"><span id="dlMeta">Version 0.1.6, a 2.3 MB DMG</span>, signed and notarized. <a href="https://github.com/alexey1312/foldy/releases">All releases</a>, or build it yourself: <code>git clone</code>, then <code>make app</code>. One menu bar icon, no account, no license key.</p>
+      <p class="note"><span id="dlMeta">Version 0.1.6, a 2.3 MB DMG, signed and notarized</span>. <a href="https://github.com/alexey1312/foldy/releases">All releases</a>, or build it yourself: <code>git clone</code>, then <code>make app</code>. One menu bar icon, no account, no license key.</p>
     </div>
     <p class="note">Needs an Apple silicon MacBook with a lid angle sensor and macOS 14 or later. Every frame is drawn with Metal on your Mac and never leaves it.</p>
   </div>
@@ -932,7 +918,9 @@
   // ---------------------------------------------------------------------------
   var audio = null, audioReady = false;
   function armAudio() {
-    if (audioReady || reduced) return;
+    // Under reduced motion nothing bends, so nothing clicks; the switch still arms
+    // the context, so a deliberate click on it is heard.
+    if (audioReady) return;
     try { audio = new (window.AudioContext || window.webkitAudioContext)(); audioReady = true; } catch (e) {}
   }
   ['pointerdown', 'keydown'].forEach(function (ev) { addEventListener(ev, armAudio, { passive: true }); });
