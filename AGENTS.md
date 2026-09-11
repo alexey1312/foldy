@@ -44,6 +44,9 @@ grey — they are AppKit's and out of reach.
   SwiftUI `Settings` scene. The scene brought chrome we could not reach and never
   opened for a shell-launched process, so the screenshot switches saw a different
   window from the one users get.
+- Building needs the macOS 26 SDK (Xcode 26+), CI included: `#available` gates the
+  call, not the symbol, so the glass APIs must exist at compile time. The floor for
+  running stays macOS 14.
 - Liquid Glass lives behind `Views/LiquidGlass.swift`: `glassButtonStyle`,
   `glassBackground`, `glassMorphID`, `GlassGroup`. Each picks the macOS 26 API or
   the pre-Tahoe control, so no view needs an `#available` of its own. Glass goes on

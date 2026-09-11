@@ -1,4 +1,8 @@
 # Builds the package and runs the tests on a macOS runner.
+#
+# macos-26, not macos-15: the Liquid Glass APIs in Views/LiquidGlass.swift need the
+# macOS 26 SDK to compile. `#available(macOS 26, *)` guards the call at runtime, but
+# the symbols still have to exist at build time. The deployment target stays macOS 14.
 name: CI
 
 on:
@@ -8,7 +12,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
       - run: swift --version

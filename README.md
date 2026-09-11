@@ -128,7 +128,9 @@ Sparkle's own `generate_keys` does the same and keeps the seed in the login keyc
 
 ## Build and run
 
-Xcode 16 or later with the macOS 14 SDK. Everything is a Swift package.
+Xcode 26 or later, for the macOS 26 SDK: the Liquid Glass calls need those symbols
+at build time, even though `#available` keeps them off Sonoma at runtime. The
+deployment target is still macOS 14. Everything is a Swift package.
 
 ```bash
 make app          # swift build -c release, then wraps build/Foldy.app (ad-hoc signed)
@@ -233,7 +235,7 @@ is what carries Sparkle feeds baked into copies older than 0.1.5.
 ## Status
 
 Built and checked on a Mac mini (M4 Pro, macOS 26.6, Xcode 27 beta) and on the
-GitHub `macos-15` runner:
+GitHub `macos-26` runner:
 
 - `swift build`, `swift test` (12 tests) and `make app` pass on both.
 - Liquid Glass was checked against the macOS 27 SDK on macOS 26.6: the glass pills,
