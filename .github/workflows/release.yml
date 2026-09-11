@@ -17,10 +17,21 @@ permissions:
   contents: write
   actions: write   # to start the Pages deploy after the appcast commit
 
+# Two tags pushed close together would otherwise race on the appcast commit, and the
+# loser's push is rejected after its release is already public.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 env:
   HAS_SIGNING: ${{ secrets.MACOS_CERTIFICATE_P12 != '' && secrets.APP_STORE_CONNECT_KEY != '' }}
   HAS_SPARKLE: ${{ secrets.SPARKLE_PRIVATE_KEY != '' }}
+  # Keep in step with the Sparkle version pinned in Package.swift.
   SPARKLE_VERSION: 2.9.6
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
 
 jobs:
   release:
@@ -29,11 +40,34 @@ jobs:
       - uses: actions/checkout@v7
       - run: swift --version
 
+      - name: Refuse a half-configured signing setup
+        env:
+          HAS_CERT: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
+          HAS_KEY: ${{ secrets.APP_STORE_CONNECT_KEY != '' }}
+        run: |
+          # Otherwise one missing secret silently downgrades the release to ad-hoc and
+          # the only sign of it is a sentence in the release notes.
+          if [ "$HAS_CERT" != "$HAS_KEY" ]; then
+            echo "::error::Signing is half configured (certificate: $HAS_CERT, notarization key: $HAS_KEY). Set both MACOS_CERTIFICATE_P12 and APP_STORE_CONNECT_KEY, or neither."
+            exit 1
+          fi
+          if [ "$HAS_CERT" != "true" ]; then
+            echo "::warning::No signing secrets; this release will be ad-hoc signed and not notarized."
+          fi
+          if [ "${HAS_SPARKLE}" != "true" ]; then
+            echo "::warning::No SPARKLE_PRIVATE_KEY; the appcast will not be updated and installed copies will not see this release."
+          fi
+
       - name: Stamp the version from the tag
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
+          # CFBundleVersion is what Sparkle compares first, so it has to rise with the
+          # version — not with the run counter, which resets if this file is ever renamed
+          # and inverts if an older tag is re-released after a newer one. 0.1.5 -> 105.
+          BUILD="$(printf '%s' "$VERSION" | awk -F. '{printf "%d", ($1 * 10000) + ($2 * 100) + $3}')"
+          test "$BUILD" -gt 0
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Support/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Support/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD" Support/Info.plist
 
       - run: swift test
 
@@ -97,7 +131,7 @@ jobs:
           mkdir -p dist
           ditto -c -k --keepParent build/Foldy.app "dist/Foldy-$VERSION.zip"
           STAGE="$(mktemp -d)"
-          cp -R build/Foldy.app "$STAGE/"
+          command cp -Rf build/Foldy.app "$STAGE/"
           ln -s /Applications "$STAGE/Applications"
           hdiutil create -volname Foldy -srcfolder "$STAGE" -ov -format UDZO "dist/Foldy-$VERSION.dmg"
 
@@ -112,7 +146,10 @@ jobs:
           xcrun notarytool submit "dist/Foldy-$VERSION.dmg" \
             --key "$RUNNER_TEMP/AuthKey.p8" --key-id "$KEY_ID" --issuer "$ISSUER_ID" --wait
           xcrun stapler staple "dist/Foldy-$VERSION.dmg"
-          rm -f "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: Shred the notarization key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
 
       # The site's download button links to releases/latest/download/Foldy.dmg, which
       # resolves only on an asset whose name never changes; copy the stapled DMG after
@@ -123,7 +160,11 @@ jobs:
       - name: Checksums
         run: (cd dist && shasum -a 256 Foldy-*.zip Foldy*.dmg > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
-      - name: Publish the release
+      # Created as a draft: a release is irrevocable once public, and everything that can
+      # still fail — the appcast, its commit, the Pages deploy — comes after this. A draft
+      # that never goes live is a failed run to re-run, not a download users can install
+      # and then never update from.
+      - name: Publish the release as a draft
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -134,6 +175,7 @@ jobs:
             NOTES="Ad-hoc signed, not notarized. macOS blocks the first launch: open Foldy once, then System Settings › Privacy & Security › **Open Anyway**. Or clear the quarantine flag first: \`xattr -dr com.apple.quarantine /Applications/Foldy.app\`. Needs macOS 14 and an Apple silicon MacBook with a lid angle sensor; the welcome tour asks for Screen Recording on the first launch."
           fi
           gh release create "$GITHUB_REF_NAME" dist/* \
+            --draft \
             --title "Foldy $VERSION" \
             --generate-notes \
             --notes "$NOTES"
@@ -176,9 +218,38 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -- .   # drop the version stamp before leaving the tag
           git checkout -B main origin/main
-          cp "$WORK/appcast.xml" site/appcast.xml
+          command cp -f "$WORK/appcast.xml" site/appcast.xml
           git add site/appcast.xml
           git commit -m "Appcast: Foldy $VERSION"
-          git push origin main
-          # A push made with GITHUB_TOKEN starts no workflow on its own; ask Pages to deploy.
+          # main may have moved since the fetch; rebase onto it rather than failing after
+          # the build has already been paid for.
+          for attempt in 1 2 3 4 5; do
+            if git push origin main; then
+              break
+            fi
+            echo "push rejected, rebasing (attempt $attempt)"
+            git fetch --depth 1 origin main
+            git rebase origin/main || { git rebase --abort; exit 1; }
+            if [ "$attempt" = "5" ]; then
+              echo "::error::Could not push the appcast after five attempts."
+              exit 1
+            fi
+          done
+
+      - name: Make the release public
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false
+
+      - name: Deploy the site
+        if: env.HAS_SPARKLE == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A push made with GITHUB_TOKEN starts no workflow on its own; ask Pages to
+          # deploy, then wait for the run so a failed deploy fails this job rather than
+          # leaving the feed stale behind a green tick.
           gh workflow run pages.yml --ref main
+          sleep 15
+          RUN_ID="$(gh run list --workflow pages.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+          gh run watch "$RUN_ID" --exit-status

@@ -828,7 +828,9 @@
       this.u[n] = gl.getUniformLocation(prog, n);
     }, this);
 
-    var n = 48, verts = [], idx = [];
+    // FoldRenderer.gridResolution in Sources/FoldyCore/FoldRenderer.swift. 65 * 65
+    // vertices still index as Uint16.
+    var n = 64, verts = [], idx = [];
     for (var r = 0; r <= n; r++) for (var c = 0; c <= n; c++) verts.push(c / n, r / n);
     for (var r2 = 0; r2 < n; r2++) for (var c2 = 0; c2 < n; c2++) {
       var a = r2 * (n + 1) + c2, b = a + 1, d = a + n + 1, e = d + 1;
@@ -875,6 +877,8 @@
     gl.uniform1f(u.uPerspective, p.perspective); gl.uniform1f(u.uBend, p.bend);
     gl.uniform1f(u.uBlur, p.blur); gl.uniform1f(u.uShadow, p.shadow); gl.uniform1f(u.uFrost, p.frost);
     gl.uniform1f(u.uAspect, this.canvas.width / this.canvas.height);
+    // cameraDistance, maxTiltDegrees and cornerRadius in FoldRenderer.swift. The shader
+    // bodies are obviously paired; these three are the ones that drift unnoticed.
     gl.uniform1f(u.uCamera, 2.4); gl.uniform1f(u.uMaxTilt, 72 * Math.PI / 180); gl.uniform1f(u.uCorner, 0.03);
     gl.drawElements(gl.TRIANGLES, this.indexCount, gl.UNSIGNED_SHORT, 0);
   };

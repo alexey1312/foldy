@@ -104,7 +104,6 @@ it and the DMG, and staples both, so the download opens without any warning.
 | --- | --- |
 | `MACOS_CERTIFICATE_P12` | the base64 from step 3 |
 | `MACOS_CERTIFICATE_PASSWORD` | the `.p12` password |
-| `APPLE_TEAM_ID` | from step 1 |
 | `APP_STORE_CONNECT_KEY_ID` | from step 4 |
 | `APP_STORE_CONNECT_ISSUER_ID` | from step 4 |
 | `APP_STORE_CONNECT_KEY` | the contents of the `.p8` file |
