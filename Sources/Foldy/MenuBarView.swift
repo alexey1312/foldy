@@ -26,6 +26,9 @@ struct MenuBarView: View {
             Text("Settings…")
         }
         .keyboardShortcut(",")
+        Button("Welcome Tour…") {
+            controller.showOnboarding(step: 0)
+        }
         Divider()
         Button("Quit Foldy") {
             NSApp.terminate(nil)

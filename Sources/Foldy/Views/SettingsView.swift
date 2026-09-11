@@ -34,7 +34,7 @@ struct SettingsView: View {
                     switch pane {
                     case .general: GeneralSettingsView(controller: controller)
                     case .appearance: AppearanceSettingsView(controller: controller)
-                    case .about: AboutView()
+                    case .about: AboutView(controller: controller)
                     }
                 }
                 .frame(maxWidth: 680, alignment: .leading)

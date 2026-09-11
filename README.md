@@ -63,13 +63,42 @@ message about Foldy and click **Open Anyway**. Or clear the quarantine flag firs
 xattr -dr com.apple.quarantine /Applications/Foldy.app
 ```
 
-On the first launch Foldy asks for Screen Recording and opens its General pane.
-Allow it in System Settings, then choose **Relaunch Foldy** from the menu bar: macOS
-gives the permission to a fresh process only. Until then Foldy folds a sample
-wallpaper instead of the live desktop.
+The first launch opens a short welcome tour: it shows the lid sensor live, asks for
+Screen Recording (macOS gives the permission to a fresh process only, so the tour
+offers a relaunch and continues where it left off), lets you pick a style and try
+the fold on the real display. Until Screen Recording is allowed Foldy folds a
+sample wallpaper instead of the live desktop. The tour is always a click away:
+menu bar › Welcome Tour….
 
 Releases are cut by `.github/workflows/release.yml` from a `v*` tag; CI on every
 push builds the package, runs the tests and bundles the app.
+
+### Signing
+
+Releases are ad-hoc signed until the repository has signing secrets. With them, the
+workflow signs the app with a Developer ID (hardened runtime, timestamp), notarizes
+it and the DMG, and staples both, so the download opens without any warning.
+
+1. Join the Apple Developer Program and note the Team ID (Membership page).
+2. Xcode › Settings › Accounts › Manage Certificates › + › **Developer ID Application**.
+3. In Keychain Access export that certificate as a `.p12` with a password, then
+   `base64 -i DeveloperID.p12 | pbcopy`.
+4. App Store Connect › Users and Access › Integrations › App Store Connect API ›
+   Team Keys › Generate (role Developer). Download the `.p8`, note the Key ID and
+   the Issuer ID.
+5. Repository › Settings › Secrets and variables › Actions:
+
+| Secret | Value |
+| --- | --- |
+| `MACOS_CERTIFICATE_P12` | the base64 from step 3 |
+| `MACOS_CERTIFICATE_PASSWORD` | the `.p12` password |
+| `APPLE_TEAM_ID` | from step 1 |
+| `APP_STORE_CONNECT_KEY_ID` | from step 4 |
+| `APP_STORE_CONNECT_ISSUER_ID` | from step 4 |
+| `APP_STORE_CONNECT_KEY` | the contents of the `.p8` file |
+
+Locally, `CODESIGN_IDENTITY="Developer ID Application: Name (TEAMID)" make app`
+signs the same way; notarize with `xcrun notarytool` if you ship that build.
 
 ## Build and run
 

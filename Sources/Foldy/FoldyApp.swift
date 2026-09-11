@@ -40,11 +40,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 ///   --settings [--pane general|appearance|about] [--window-height N]   open Settings at launch
 ///   --screenshot-settings <png> [--scroll N]   open Settings, capture the window, quit
 ///   --screenshot-fold <png>          fold the sample wallpaper, capture the overlay, quit
+///   --onboarding                     open the welcome tour at launch
+///   --screenshot-onboarding <png> [--step N]   open the tour at a step, capture, quit
 ///
 /// Capturing our own windows needs no Screen Recording permission, so this works on a
 /// fresh machine and on a Mac without a lid.
 @MainActor
 enum DevFlags {
+    /// True when the process exists only to take a picture and quit.
+    static var isScreenshotRun: Bool {
+        CommandLine.arguments.contains { $0.hasPrefix("--screenshot-") }
+    }
+
     static func apply() {
         let args = CommandLine.arguments
         func value(after flag: String) -> String? {
@@ -64,7 +71,7 @@ enum DevFlags {
         if let path = value(after: "--screenshot-settings") {
             let scroll = value(after: "--scroll").flatMap(Double.init) ?? 0
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                let window = NSApp.windows.first { $0.isVisible && $0.styleMask.contains(.titled) }
+                let window = NSApp.windows.first { $0.isVisible && $0.title == "Foldy Settings" }
                 if scroll > 0, let scrollView = window?.contentView.flatMap(firstScrollView) {
                     scrollView.contentView.scroll(to: NSPoint(x: 0, y: scroll))
                     scrollView.reflectScrolledClipView(scrollView.contentView)
@@ -73,6 +80,18 @@ enum DevFlags {
                     capture(window, to: path)
                     NSApp.terminate(nil)
                 }
+            }
+        }
+        if args.contains("--onboarding") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { AppController.shared.showOnboarding(step: 0) }
+        }
+        if let path = value(after: "--screenshot-onboarding") {
+            let step = value(after: "--step").flatMap(Int.init) ?? 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { AppController.shared.showOnboarding(step: step) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
+                let window = NSApp.windows.first { $0.isVisible && $0.title == OnboardingWindowController.windowTitle }
+                capture(window, to: path)
+                NSApp.terminate(nil)
             }
         }
         if let path = value(after: "--screenshot-fold") {

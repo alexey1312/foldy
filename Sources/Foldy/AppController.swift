@@ -44,7 +44,7 @@ final class AppController {
     /// fresh process, so the live desktop needs a relaunch.
     private(set) var needsRelaunchForPermission = false
     @ObservationIgnored private var lastPermissionCheck = Date.distantPast
-    private static let promptedForScreenRecordingKey = "app.foldy.promptedForScreenRecording"
+    @ObservationIgnored private let onboarding = OnboardingWindowController()
     /// Set from the menu. Nothing folds until resumed.
     private(set) var isPaused = false
     /// Set by a click or Esc on the fold. Clears once the lid opens past the clear angle.
@@ -157,20 +157,15 @@ final class AppController {
 
         sensor.start()
         evaluate()
-        promptForScreenRecordingIfNeeded()
+        if !settings.onboardingCompleted, !DevFlags.isScreenshotRun {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { self.showOnboarding() }
+        }
     }
 
-    /// The first launch without Screen Recording asks macOS for it, which lists Foldy
-    /// in System Settings, and opens General so the switch and the reason are in view.
-    private func promptForScreenRecordingIfNeeded() {
-        guard !hasScreenPermission, !settings.sampleWallpaper else { return }
-        let defaults = UserDefaults.standard
-        guard !defaults.bool(forKey: Self.promptedForScreenRecordingKey) else { return }
-        defaults.set(true, forKey: Self.promptedForScreenRecordingKey)
-        DisplayCapture.requestPermission()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            self.openSettings(hosted: true, pane: .general)
-        }
+    /// The welcome tour. Resumes at the saved step, so a relaunch for Screen
+    /// Recording lands on the step after it.
+    func showOnboarding(step: Int? = nil) {
+        onboarding.show(controller: self, step: step)
     }
 
     func stop() {

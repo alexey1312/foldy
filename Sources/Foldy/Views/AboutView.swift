@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct AboutView: View {
+    var controller: AppController
+
     private var version: String {
         let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
@@ -28,6 +30,8 @@ struct AboutView: View {
                         .foregroundStyle(.secondary)
                     Text("Your desktop bends as you close the lid.")
                         .foregroundStyle(.secondary)
+                    Button("Welcome Tour…") { controller.showOnboarding(step: 0) }
+                        .padding(.top, 6)
                 }
             }
 

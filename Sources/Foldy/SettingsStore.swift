@@ -16,6 +16,8 @@ final class SettingsStore {
         var previewAngle: Double = FoldCurve.fullyOpenAngle
         var sampleWallpaper = false
         var showsAngleInMenuBar = false
+        var onboardingCompleted = false
+        var onboardingStep = 0
     }
 
     private static let key = "app.foldy.settings"
@@ -31,6 +33,10 @@ final class SettingsStore {
     var previewAngle: Double { didSet { save() } }
     var sampleWallpaper: Bool { didSet { save() } }
     var showsAngleInMenuBar: Bool { didSet { save() } }
+    /// The welcome tour has been finished (or skipped) once.
+    var onboardingCompleted: Bool { didSet { save() } }
+    /// Where the tour resumes after a relaunch for Screen Recording.
+    var onboardingStep: Int { didSet { save() } }
 
     init() {
         var snapshot = Snapshot()
@@ -46,6 +52,8 @@ final class SettingsStore {
         previewAngle = snapshot.previewAngle
         sampleWallpaper = snapshot.sampleWallpaper
         showsAngleInMenuBar = snapshot.showsAngleInMenuBar
+        onboardingCompleted = snapshot.onboardingCompleted
+        onboardingStep = snapshot.onboardingStep
         loading = false
     }
 
@@ -98,7 +106,8 @@ final class SettingsStore {
         let snapshot = Snapshot(
             style: style, styleParameters: styleParameters, curve: curve, soundEnabled: soundEnabled,
             previewFollowsLid: previewFollowsLid, previewAngle: previewAngle,
-            sampleWallpaper: sampleWallpaper, showsAngleInMenuBar: showsAngleInMenuBar
+            sampleWallpaper: sampleWallpaper, showsAngleInMenuBar: showsAngleInMenuBar,
+            onboardingCompleted: onboardingCompleted, onboardingStep: onboardingStep
         )
         if let data = try? JSONEncoder().encode(snapshot) {
             UserDefaults.standard.set(data, forKey: Self.key)
