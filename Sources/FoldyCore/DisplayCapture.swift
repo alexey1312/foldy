@@ -56,8 +56,20 @@ public final class DisplayCapture: NSObject, @unchecked Sendable {
             self.stream = nil
             nonisolated(unsafe) let doomed = stream
             Task {
-                try? await doomed.stopCapture()
-                self.queue.async { self.set(.idle) }
+                do {
+                    try await doomed.stopCapture()
+                } catch {
+                    // The stream may well still be live; say so rather than leaving the
+                    // screen recording indicator lit with no explanation anywhere.
+                    FoldyLog.capture.error("stopCapture failed: \(error.localizedDescription, privacy: .public)")
+                }
+                self.queue.async {
+                    // A start that raced this stop owns the state now: its stream is either
+                    // assigned already or still starting. Publishing .idle over it would tell
+                    // the app to start a third one and drop the second, live, unstoppable.
+                    guard self.stream == nil, self.state != .starting else { return }
+                    self.set(.idle)
+                }
             }
         }
     }
@@ -94,7 +106,11 @@ public final class DisplayCapture: NSObject, @unchecked Sendable {
 
             queue.async {
                 guard generation == self.generation else {
-                    Task { try? await stream.stopCapture() }
+                    FoldyLog.capture.notice("stream superseded before it went live; stopping it")
+                    Task {
+                        try? await stream.stopCapture()
+                        try? stream.removeStreamOutput(self, type: .screen)
+                    }
                     return
                 }
                 self.stream = stream
@@ -102,6 +118,7 @@ public final class DisplayCapture: NSObject, @unchecked Sendable {
             }
         } catch {
             let message = error.localizedDescription
+            FoldyLog.capture.error("startCapture failed: \(message, privacy: .public)")
             queue.async {
                 // A stop() that raced this start already put the state back to idle.
                 guard generation == self.generation else { return }
@@ -139,6 +156,7 @@ extension DisplayCapture: SCStreamOutput, SCStreamDelegate {
 
     public func stream(_ stream: SCStream, didStopWithError error: Error) {
         let message = error.localizedDescription
+        FoldyLog.capture.error("stream stopped: \(message, privacy: .public)")
         nonisolated(unsafe) let stopped = stream
         queue.async {
             // A stream that was already replaced or stopped has nothing to report.

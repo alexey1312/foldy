@@ -14,14 +14,15 @@ final class OverlayWindowController {
     private let view: OverlayMetalView
     private var hiding = false
     private var previousApp: NSRunningApplication?
+    private var hideWatchdog: DispatchWorkItem?
 
     init(graphics: FoldGraphics) throws {
         renderer = try FoldRenderer(graphics: graphics)
         renderer.smoothing = 0.12
         renderer.cornerRadius = 0.02
 
-        let screen = Self.targetScreen()
-        window = OverlayWindow(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false)
+        let frame = Self.targetScreen()?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        window = OverlayWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         window.level = .screenSaver
         window.isOpaque = true
         window.backgroundColor = .black
@@ -33,7 +34,7 @@ final class OverlayWindowController {
         // Left out of every screen capture, so the desktop underneath is what gets folded.
         window.sharingType = .none
 
-        view = OverlayMetalView(frame: NSRect(origin: .zero, size: screen.frame.size), device: graphics.device)
+        view = OverlayMetalView(frame: NSRect(origin: .zero, size: frame.size), device: graphics.device)
         view.renderer = renderer
         view.commandQueue = graphics.commandQueue
         view.colorPixelFormat = FoldGraphics.pixelFormat
@@ -49,19 +50,23 @@ final class OverlayWindowController {
 
     // MARK: Screens
 
-    static func targetScreen() -> NSScreen {
+    /// The built-in display, or the best stand-in. `nil` while every display is asleep
+    /// or the last one has just been unplugged — `NSScreen.screens` really is empty then,
+    /// and this is called straight from the notification that says so.
+    static func targetScreen() -> NSScreen? {
         NSScreen.screens.first { screen in
             guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return false }
             return CGDisplayIsBuiltin(number) != 0
-        } ?? NSScreen.main ?? NSScreen.screens[0]
+        } ?? NSScreen.main ?? NSScreen.screens.first
     }
 
     static func targetDisplayID() -> CGDirectDisplayID {
-        (targetScreen().deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID) ?? CGMainDisplayID()
+        (targetScreen()?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID) ?? CGMainDisplayID()
     }
 
     func screenChanged() {
-        window.setFrame(Self.targetScreen().frame, display: true)
+        guard let screen = Self.targetScreen() else { return }
+        window.setFrame(screen.frame, display: true)
     }
 
     /// The window is normally invisible to screen capture (`sharingType = .none`), so it
@@ -79,20 +84,32 @@ final class OverlayWindowController {
     }
 
     func useSampleWallpaper() {
-        let screen = Self.targetScreen()
-        let scale = screen.backingScaleFactor
-        let width = Int(screen.frame.width * scale), height = Int(screen.frame.height * scale)
-        guard let image = WallpaperArt.image(width: width, height: height), (try? renderer.setSource(cgImage: image)) != nil else { return }
+        let frame = Self.targetScreen()?.frame ?? window.frame
+        let scale = Self.targetScreen()?.backingScaleFactor ?? 2
+        let width = Int(frame.width * scale), height = Int(frame.height * scale)
+        // Marked before the attempt: drawing the wallpaper costs a full-screen CoreGraphics
+        // pass, and evaluate() comes back up to 60 times a second while the lid moves.
         hasSampleSource = true
+        guard let image = WallpaperArt.image(width: width, height: height) else {
+            FoldyLog.graphics.error("sample wallpaper could not be drawn")
+            return
+        }
+        do {
+            try renderer.setSource(cgImage: image)
+        } catch {
+            FoldyLog.graphics.error("sample wallpaper would not upload: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     // MARK: Show and hide
 
     func show() {
         hiding = false
+        hideWatchdog?.cancel()
+        hideWatchdog = nil
         guard !isShown else { return }
         isShown = true
-        window.setFrame(Self.targetScreen().frame, display: false)
+        if let screen = Self.targetScreen() { window.setFrame(screen.frame, display: false) }
         window.alphaValue = 0
         view.isPaused = false
         previousApp = NSWorkspace.shared.frontmostApplication
@@ -105,18 +122,36 @@ final class OverlayWindowController {
     }
 
     /// Lets the fold ease back to flat, then takes the window down.
+    ///
+    /// The teardown rides on drawn frames, and `draw` returns early when there is no
+    /// drawable — a sleeping or disconnected display. The watchdog is what stops a
+    /// full-screen window at `.screenSaver` level from staying up over everything when
+    /// the frames never come.
     func hideWhenSettled() {
-        guard isShown else { return }
+        guard isShown, !hiding else { return }
         hiding = true
+        hideWatchdog?.cancel()
+        let watchdog = DispatchWorkItem { [weak self] in
+            guard let self, hiding else { return }
+            FoldyLog.app.notice("fold did not settle; hiding the overlay anyway")
+            hideNow()
+        }
+        hideWatchdog = watchdog
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: watchdog)
     }
 
     func hideNow() {
         hiding = false
+        hideWatchdog?.cancel()
+        hideWatchdog = nil
         guard isShown else { return }
         isShown = false
         view.isPaused = true
         window.orderOut(nil)
-        if let previousApp, previousApp != NSRunningApplication.current {
+        // Only give the focus back if Foldy still has it. The user may have Cmd-Tabbed
+        // away while the fold was up, and yanking them back to the app that happened to
+        // be frontmost when the lid moved is worse than doing nothing.
+        if NSApp.isActive, let previousApp, previousApp != NSRunningApplication.current {
             previousApp.activate()
         }
         previousApp = nil

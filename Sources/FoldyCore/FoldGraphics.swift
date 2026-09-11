@@ -70,11 +70,13 @@ public final class FoldGraphics: @unchecked Sendable {
         let depthWrite = MTLDepthStencilDescriptor()
         depthWrite.depthCompareFunction = .lessEqual
         depthWrite.isDepthWriteEnabled = true
-        sceneDepthWrite = device.makeDepthStencilState(descriptor: depthWrite)!
+        guard let depthWriteState = device.makeDepthStencilState(descriptor: depthWrite) else { throw FoldGraphicsError.noDevice }
+        sceneDepthWrite = depthWriteState
         let depthRead = MTLDepthStencilDescriptor()
         depthRead.depthCompareFunction = .lessEqual
         depthRead.isDepthWriteEnabled = false
-        sceneDepthRead = device.makeDepthStencilState(descriptor: depthRead)!
+        guard let depthReadState = device.makeDepthStencilState(descriptor: depthRead) else { throw FoldGraphicsError.noDevice }
+        sceneDepthRead = depthReadState
 
         var cache: CVMetalTextureCache?
         guard CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, device, nil, &cache) == kCVReturnSuccess, let cache else {
@@ -120,7 +122,9 @@ public final class FoldGraphics: @unchecked Sendable {
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(
             pixelFormat: Self.pixelFormat, width: max(width, 1), height: max(height, 1), mipmapped: true
         )
-        descriptor.usage = [.shaderRead]
+        // `generateMipmaps` downsamples by rendering. It runs without `.renderTarget` on
+        // Apple silicon — measured — but the flag is what every other backend asks for.
+        descriptor.usage = [.shaderRead, .renderTarget]
         descriptor.storageMode = .private
         let texture = device.makeTexture(descriptor: descriptor)
         texture?.label = label

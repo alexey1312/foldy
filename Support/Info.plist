@@ -19,9 +19,12 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.1</string>
+	<string>0.1.5</string>
+	<!-- Stamped from the tag by release.yml: major * 10000 + minor * 100 + patch. Kept in
+	     step with the last release here, so a locally built Foldy.app is not offered — and
+	     replaced by — the release it was built from. -->
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>105</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>

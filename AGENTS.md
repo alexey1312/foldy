@@ -54,6 +54,16 @@ grey — they are AppKit's and out of reach.
 - `AppController` (`@MainActor @Observable`, singleton) owns every decision:
   `evaluate()` re-reads angle, permission, pause/dismiss/sweep state and makes the
   overlay, the capture and the sound match. Add new behaviour there, not in views.
+  The one exception is `FoldyCore/CapturePolicy.swift`, the pure state machine behind
+  "capture now?" and "fold now?". It lives in the core because it is the only part of
+  this that can be tested, and both bugs it guards against shipped unnoticed on a Mac
+  with no lid. `AppController` is its only caller: add a condition there, with a test,
+  not inline in `evaluate()`.
+- Settings are persisted as one JSON blob through `FoldyCore/SettingsSnapshot.swift`,
+  which decodes by hand. Synthesized `Decodable` ignores property defaults, so a new
+  field makes an older blob throw and the `try?` in `SettingsStore` then resets every
+  setting the user had. That shipped in 0.1.2. Add fields to `SettingsSnapshot`, keep
+  `init(from:)` in step, and `SettingsSnapshotTests` holds the line.
 - The Metal shaders live in `FoldShaders.swift` as a string, compiled at launch.
   That is deliberate: no resource bundle, no Metal build step, works from a hand-
   made app bundle. Keep `FoldUniforms`/`SceneUniforms` in Swift and MSL in sync
@@ -71,9 +81,28 @@ grey — they are AppKit's and out of reach.
 - Screen Recording is granted to a fresh process only: after a grant, offer
   `AppController.relaunch()`; never assume capture works in the same process.
 - The overlay shows at fold progress > 0.02 and hides only at 0, so a lid resting
-  at the clear angle does not flicker. Capture stops after 4 s of a flat fold.
+  at the clear angle does not flicker.
+- Capture stops after 4 s with nothing folded and then **parks**: it does not come back
+  on the next movement, only when the lid closes 1.5° below where it parked (the park
+  angle follows the lid up), when the fold is due, or on pause/sleep/display change.
+  Without the park, `capture.stop()` → `.idle` → `evaluate()` → `start()` looped every
+  four seconds and flashed the screen recording indicator for as long as the lid sat
+  still. The idle timer must arm whenever the stream is running and nothing is folded —
+  gating it on "capture wanted" left a lid resting between the bands streaming forever.
+- An accessory app's window needs more than `NSApp.activate()` + `makeKeyAndOrderFront`
+  to come up in front: `NSWindow.presentFront()` (`Views`-free, in
+  `Foldy/WindowPresentation.swift`) raises it to `.floating`, orders it front
+  regardless, and drops back to `.normal` on the next main-actor hop. Use it, and its
+  `centerOnActiveScreen()`, rather than `center()`. Windows get a `WindowCloser`
+  delegate too: both were kept alive after closing, and the Settings pane's previews
+  keep redrawing at the sensor's report rate while they live.
+- Errors go to `FoldyLog` (`os.Logger`, subsystem `app.foldy`) as well as to the status
+  line. `log stream --predicate 'subsystem == "app.foldy"'`. The status line is only
+  seen when the menu is open, which is not where a MacBook bug report comes from.
 - Dev switches must never persist state: use `forcesSampleWallpaper`, not
-  `settings.sampleWallpaper`.
+  `settings.sampleWallpaper`, and guard any `settings` write a screenshot run can reach
+  with `!DevFlags.isScreenshotRun` — `make shots` was parking the developer's own
+  welcome tour at step 2.
 - Never put `.tint(.clear)` on `.buttonStyle(.glass)`, whatever the migration guides
   say. On macOS the tint reaches the label too, so the title disappears in the window
   that has focus. `.glassProminent` ignores a tint outright.
@@ -91,7 +120,10 @@ grey — they are AppKit's and out of reach.
 
 - `git tag vX.Y.Z && git push origin vX.Y.Z` runs `.github/workflows/release.yml`:
   version stamped from the tag, tests, `bundle.sh release`, zip + DMG, GitHub
-  Release. With the signing secrets it signs with Developer ID, notarizes and
+  Release. The release is created as a **draft** and only made public after the appcast
+  is committed, so a run that dies half way leaves nothing users can install but never
+  update from. `CFBundleVersion` is derived from the tag (0.1.5 → 105), not from the
+  run number: Sparkle compares it first, and a run counter can reset or invert. With the signing secrets it signs with Developer ID, notarizes and
   staples; with `SPARKLE_PRIVATE_KEY` it also signs the zip, rewrites
   `site/appcast.xml` on `main` and triggers the Pages deploy (a GITHUB_TOKEN push
   starts no workflow by itself, hence `gh workflow run pages.yml`).

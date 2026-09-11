@@ -12,6 +12,9 @@ final class AppController {
     let settings = SettingsStore()
     let graphics: FoldGraphics?
     let graphicsError: String?
+    /// The overlay could not be built. Without this the fold simply never appeared and
+    /// the status line cheerfully reported the lid angle.
+    private(set) var overlayError: String?
     /// Sparkle. Dormant in screenshot runs and outside an app bundle.
     let updater = Updater(enabled: !DevFlags.isScreenshotRun)
 
@@ -23,19 +26,21 @@ final class AppController {
     @ObservationIgnored private var sweepStart: Date?
     @ObservationIgnored private var soundArmed = false
     @ObservationIgnored private var started = false
-    @ObservationIgnored private var observers: [NSObjectProtocol] = []
+    @ObservationIgnored private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     @ObservationIgnored private var lastCaptureFailure: Date?
     @ObservationIgnored private var captureIdleTimer: DispatchWorkItem?
+    /// Every capture and overlay decision, in one testable place. See `CapturePolicy`.
+    @ObservationIgnored private var policy = CapturePolicy()
+    /// Re-evaluates after a capture failure, since a still lid reports no angles and
+    /// would otherwise never call `evaluate()` again to retry.
+    @ObservationIgnored private var captureRetryTimer: DispatchWorkItem?
     /// Development only (`--screenshot-fold`): never persisted, unlike the setting.
     @ObservationIgnored var forcesSampleWallpaper = false
     private static let captureRetryDelay: TimeInterval = 5
-    /// How long the desktop may sit flat with the lid near the fold before the
-    /// capture is stopped. It restarts on the next lid movement.
+    /// How long the desktop may sit flat with nothing folded before the capture is
+    /// stopped. It stays stopped until the lid closes `CapturePolicy.wakeDegrees` below
+    /// where it came to rest, or the fold is wanted.
     private static let captureIdleTimeout: TimeInterval = 4
-    /// The fold has to reach this much before the overlay is shown; once shown it
-    /// stays until the fold is fully gone, so a lid resting at the clear angle
-    /// does not flicker the window in and out.
-    private static let showThreshold: Double = 0.02
 
     /// The hinge angle from the sensor, degrees.
     private(set) var lidAngle: Double = FoldCurve.fullyOpenAngle
@@ -86,13 +91,14 @@ final class AppController {
 
     var statusLine: String {
         if let graphicsError { return "Metal unavailable: \(graphicsError)" }
+        if let overlayError { return "The fold can't be drawn: \(overlayError)" }
+        if case let .failed(message) = captureState { return "Capture failed: \(message)" }
         if isPaused { return "Paused" }
         switch sensorAvailability {
         case .searching: return "Looking for the lid sensor…"
         case let .unavailable(reason): return reason
         case .available:
             if needsRelaunchForPermission { return "Screen Recording allowed · relaunch Foldy to use it" }
-            if case let .failed(message) = captureState { return "Capture failed: \(message)" }
             if !hasScreenPermission, !settings.sampleWallpaper { return "Lid at \(Int(lidAngle.rounded()))° · Screen Recording needed" }
             return "Lid at \(Int(lidAngle.rounded()))°"
         }
@@ -139,23 +145,25 @@ final class AppController {
                 }
             } catch {
                 overlay = nil
+                overlayError = error.localizedDescription
+                FoldyLog.app.error("overlay unavailable: \(error.localizedDescription, privacy: .public)")
             }
         }
 
-        let center = NSWorkspace.shared.notificationCenter
-        observers.append(center.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { _ in
+        let workspace = NSWorkspace.shared.notificationCenter
+        let center = NotificationCenter.default
+        observers.append((workspace, workspace.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { AppController.shared.systemWillSleep() }
-        })
-        observers.append(center.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
+        }))
+        observers.append((workspace, workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { AppController.shared.evaluate() }
-        })
-        observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { _ in
+        }))
+        observers.append((center, center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { AppController.shared.screenChanged() }
-        })
-
-        observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
+        }))
+        observers.append((center, center.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { AppController.shared.refreshPermission() }
-        })
+        }))
 
         sensor.start()
         evaluate()
@@ -172,20 +180,29 @@ final class AppController {
 
     func stop() {
         sweepTimer?.invalidate()
+        sweepTimer = nil
+        sweepStart = nil
+        isSweeping = false
+        captureIdleTimer?.cancel()
+        captureIdleTimer = nil
+        captureRetryTimer?.cancel()
+        captureRetryTimer = nil
         overlay?.hideNow()
         capture.stop()
         sensor.stop()
-        for observer in observers {
-            NSWorkspace.shared.notificationCenter.removeObserver(observer)
-            NotificationCenter.default.removeObserver(observer)
+        settings.flush()
+        for (center, observer) in observers {
+            center.removeObserver(observer)
         }
         observers.removeAll()
+        started = false
     }
 
     // MARK: Actions
 
     func togglePause() {
         isPaused.toggle()
+        policy.unpark()
         evaluate()
     }
 
@@ -202,9 +219,12 @@ final class AppController {
         sweepStart = Date()
         sweepAngle = FoldCurve.fullyOpenAngle
         sweepTimer?.invalidate()
-        sweepTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { _ in
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { _ in
             MainActor.assumeIsolated { AppController.shared.advanceSweep() }
         }
+        // .default alone freezes the sweep mid-fold for the whole of a menu or a scroll.
+        RunLoop.main.add(timer, forMode: .common)
+        sweepTimer = timer
         evaluate()
     }
 
@@ -241,16 +261,34 @@ final class AppController {
             // Granted since launch. The capture would still be refused in this process.
             needsRelaunchForPermission = true
         }
+        if !granted {
+            // Taken away again: stop claiming a relaunch would help, and let the menu
+            // offer the button that fixes it.
+            needsRelaunchForPermission = false
+        }
         hasScreenPermission = granted
         evaluate()
     }
 
+    /// Why the last relaunch attempt did not happen. Shown in the menu.
+    private(set) var relaunchError: String?
+
     /// Starts a fresh copy of the app and quits this one.
     func relaunch() {
+        relaunchError = nil
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = true
-        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
-            DispatchQueue.main.async { NSApp.terminate(nil) }
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, error in
+            DispatchQueue.main.async {
+                guard error == nil else {
+                    // Quitting now would leave the user with no Foldy at all, on the one
+                    // button the Screen Recording flow depends on.
+                    AppController.shared.relaunchError = error?.localizedDescription
+                    FoldyLog.app.error("relaunch failed: \(error?.localizedDescription ?? "", privacy: .public)")
+                    return
+                }
+                NSApp.terminate(nil)
+            }
         }
     }
 
@@ -266,6 +304,7 @@ final class AppController {
     }
 
     @ObservationIgnored private var settingsWindow: NSWindow?
+    @ObservationIgnored private var settingsCloser: WindowCloser?
 
     /// Foldy's own Settings window, rather than SwiftUI's `Settings` scene.
     ///
@@ -275,9 +314,8 @@ final class AppController {
     /// from a shell, so the `--screenshot-settings` switch saw a different window from
     /// the one users get. One window, made here, fixes both.
     func openSettings(pane: SettingsView.Pane = .appearance, height: Double? = nil) {
-        NSApp.activate()
         if let settingsWindow {
-            settingsWindow.makeKeyAndOrderFront(nil)
+            settingsWindow.presentFront()
             return
         }
         let host = NSHostingController(rootView: SettingsView(controller: self, initialPane: pane).screenshotControlState())
@@ -291,8 +329,10 @@ final class AppController {
         if let height {
             window.setContentSize(NSSize(width: 940, height: height))
         }
-        window.center()
-        window.makeKeyAndOrderFront(nil)
+        window.presentFront()
+        let closer = WindowCloser { [weak self] in self?.settingsWindow = nil }
+        window.delegate = closer
+        settingsCloser = closer
         settingsWindow = window
     }
 
@@ -300,38 +340,46 @@ final class AppController {
 
     /// Re-reads every input and makes the overlay, the capture and the sound match.
     func evaluate() {
-        // Without the permission, look for it now and then; the user may have just flipped the switch.
-        if !hasScreenPermission, Date().timeIntervalSince(lastPermissionCheck) > 3 {
+        // The switch in System Settings can move either way while Foldy runs, and an
+        // .accessory app is not activated by its own menu, so this is the only place a
+        // revocation is ever noticed.
+        if Date().timeIntervalSince(lastPermissionCheck) > 3 {
             lastPermissionCheck = Date()
-            if DisplayCapture.hasPermission() {
-                needsRelaunchForPermission = true
-                hasScreenPermission = true
-            }
+            let granted = DisplayCapture.hasPermission()
+            if granted, !hasScreenPermission { needsRelaunchForPermission = true }
+            if !granted { needsRelaunchForPermission = false }
+            hasScreenPermission = granted
         }
-        let curve = settings.curve
-        let angle = effectiveAngle
-        if isDismissed, angle >= curve.clearAngle { isDismissed = false }
+        let decision = policy.decide(CapturePolicy.Input(
+            angle: effectiveAngle,
+            curve: settings.curve,
+            isPaused: isPaused,
+            isDismissed: isDismissed,
+            isSweeping: isSweeping,
+            overlayShown: overlay?.isShown == true,
+            usesSampleWallpaper: usesSampleWallpaper
+        ))
+        if decision.clearsDismissal { isDismissed = false }
 
-        let progress = curve.progress(forAngle: angle)
-        let shown = overlay?.isShown == true
-        let wantsFold = !isPaused && !isDismissed && progress > (shown ? 0 : Self.showThreshold)
-        let nearFold = angle < curve.clearAngle + 15
-        let wantsCapture = !isPaused && !usesSampleWallpaper && (nearFold || wantsFold)
-
-        updateCapture(wanted: wantsCapture, farFromFold: angle > curve.clearAngle + 25, idle: !wantsFold)
-        updateOverlay(wantsFold: wantsFold, progress: progress)
-        updateSound(progress: progress)
+        updateCapture(decision)
+        updateOverlay(wantsFold: decision.wantsFold, progress: decision.progress)
+        updateSound(progress: decision.progress)
     }
 
-    private func updateCapture(wanted: Bool, farFromFold: Bool, idle: Bool) {
-        // A lid parked just below the clear angle would otherwise stream the display
-        // for hours with nothing on screen. Stop after a quiet spell; a movement restarts it.
-        if wanted, idle, captureState == .running {
+    private func updateCapture(_ decision: CapturePolicy.Decision) {
+        let wanted = decision.wantsCapture
+        let farFromFold = decision.farFromFold
+        // A lid resting anywhere above the fold would otherwise stream the display for
+        // hours with nothing on screen — and between the band and `farFromFold` nothing
+        // else ever stops it, since a still lid reports no angles. Stop after a quiet
+        // spell; the policy's parked angle, not the next movement, decides when it returns.
+        if decision.isIdle, captureState == .running {
             if captureIdleTimer == nil {
                 let timer = DispatchWorkItem { [weak self] in
                     guard let self else { return }
                     captureIdleTimer = nil
                     guard captureState == .running, overlay?.isShown != true else { return }
+                    policy.park(at: effectiveAngle)
                     capture.stop()
                     overlay?.clearSource()
                 }
@@ -345,12 +393,19 @@ final class AppController {
 
         switch (wanted, captureState) {
         case (true, .idle):
-            guard hasScreenPermission else { return }
+            // Lighting the screen recording indicator for a fold that cannot be drawn is
+            // indefensible.
+            guard hasScreenPermission, overlay != nil else { return }
             capture.start(displayID: OverlayWindowController.targetDisplayID())
         case (true, .failed):
-            // Every lid movement calls evaluate(); a broken capture must not be restarted at 60 Hz.
-            guard hasScreenPermission,
-                  lastCaptureFailure.map({ Date().timeIntervalSince($0) > Self.captureRetryDelay }) ?? true else { return }
+            // Every lid movement calls evaluate(); a broken capture must not be restarted
+            // at 60 Hz. A still lid reports nothing at all, so the wait needs its own timer
+            // — otherwise the retry only ever happens if some other event comes along.
+            guard hasScreenPermission, overlay != nil else { return }
+            if let last = lastCaptureFailure, Date().timeIntervalSince(last) <= Self.captureRetryDelay {
+                scheduleCaptureRetry(after: Self.captureRetryDelay - Date().timeIntervalSince(last))
+                return
+            }
             capture.start(displayID: OverlayWindowController.targetDisplayID())
         case (false, .running), (false, .starting):
             if farFromFold || isPaused || usesSampleWallpaper {
@@ -360,6 +415,17 @@ final class AppController {
         default:
             break
         }
+    }
+
+    private func scheduleCaptureRetry(after delay: TimeInterval) {
+        guard captureRetryTimer == nil else { return }
+        let timer = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            captureRetryTimer = nil
+            evaluate()
+        }
+        captureRetryTimer = timer
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(delay, 0.1), execute: timer)
     }
 
     private func updateOverlay(wantsFold: Bool, progress: Double) {
@@ -392,6 +458,7 @@ final class AppController {
         overlay?.hideNow()
         capture.stop()
         overlay?.clearSource()
+        policy.unpark()
     }
 
     /// The stream's size is fixed at start, so a resolution or display change needs a
@@ -400,6 +467,7 @@ final class AppController {
         overlay?.screenChanged()
         capture.stop()
         overlay?.clearSource()
+        policy.unpark()
         evaluate()
     }
 }

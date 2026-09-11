@@ -63,7 +63,6 @@ struct SettingsView: View {
             .background(.background)
         }
         .frame(minWidth: 900, idealWidth: 940, minHeight: 700, idealHeight: 760)
-        .onAppear { NSApp.activate() }
     }
 }
 

@@ -57,6 +57,12 @@ struct FoldStyleTests {
         }
     }
 
+    @Test("clamping actually clamps")
+    func clampingClamps() {
+        let wild = FoldParameters(perspective: 2, blur: -1, shadow: 0.5, bend: 1.5, frost: -0.2).clamped()
+        #expect(wild == FoldParameters(perspective: 1, blur: 0, shadow: 0.5, bend: 1, frost: 0))
+    }
+
     @Test("round-trips through Codable")
     func codable() throws {
         let encoded = try JSONEncoder().encode(FoldStyle.frost.parameters)

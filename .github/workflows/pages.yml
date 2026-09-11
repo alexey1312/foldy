@@ -13,9 +13,11 @@ permissions:
   pages: write
   id-token: write
 
+# Not cancel-in-progress: a queued deploy may be the one carrying a fresh appcast, and
+# cancelling it leaves installed copies looking at the previous release forever.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:

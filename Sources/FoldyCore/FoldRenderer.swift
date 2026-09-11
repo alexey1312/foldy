@@ -32,7 +32,7 @@ public final class FoldRenderer: @unchecked Sendable {
     public var targetProgress: Double = 0
     /// Where the fold is now, after smoothing.
     public private(set) var progress: Double = 0
-    /// Per-frame lerp factor toward the target. 1 disables smoothing.
+    /// Lerp factor toward the target per 1/60 s. 1 disables smoothing.
     public var smoothing: Double = 0.1
     public var parameters: FoldParameters = FoldStyle.silk.parameters
     /// Corner radius of the sheet in units of its height.
@@ -48,6 +48,7 @@ public final class FoldRenderer: @unchecked Sendable {
     private let lock = NSLock()
     private var pendingPixelBuffer: CVPixelBuffer?
     private var source: MTLTexture?
+    private var lastStep: TimeInterval?
 
     public static let gridResolution = 64
 
@@ -129,14 +130,28 @@ public final class FoldRenderer: @unchecked Sendable {
     // MARK: - Frame
 
     /// Moves `progress` toward `targetProgress`. Call once per frame.
+    ///
+    /// The easing is per unit time, not per frame: a dropped frame would otherwise
+    /// stretch the fold, which reads as a stutter exactly when the machine is busiest.
     public func step() {
         let target = targetProgress.clamped()
         if smoothing >= 1 {
             progress = target
+            lastStep = nil
             return
         }
-        progress += (target - progress) * smoothing
+        let now = ProcessInfo.processInfo.systemUptime
+        let dt = lastStep.map { min(max(now - $0, 0), 0.1) } ?? (1.0 / 60.0)
+        lastStep = now
+        progress += (target - progress) * Self.factor(smoothing, dt: dt)
         if abs(target - progress) < 0.0005 { progress = target }
+    }
+
+    /// `smoothing` is quoted per 1/60 s; stretch it to the frame actually drawn.
+    static func factor(_ smoothing: Double, dt: TimeInterval) -> Double {
+        let per60 = smoothing.clamped()
+        if per60 <= 0 { return 0 }
+        return 1 - pow(1 - per60, dt * 60)
     }
 
     /// Drops the desktop so the next show waits for a fresh frame.
@@ -234,9 +249,15 @@ public final class FoldRenderer: @unchecked Sendable {
                   to: source, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin())
         blit.generateMipmaps(for: source)
         blit.endEncoding()
-        // Keep the CoreVideo texture alive until the GPU has read it.
+        // Keep the CoreVideo texture alive until the GPU has read it, then let the cache
+        // drop the IOSurface it was holding — unflushed, it accumulates one per frame.
         let retained = Retained(cvTexture)
-        commandBuffer.addCompletedHandler { _ in _ = retained }
+        let cache = Retained(graphics.textureCache)
+        commandBuffer.addCompletedHandler { _ in
+            _ = retained
+            // swiftlint:disable:next force_cast
+            CVMetalTextureCacheFlush(cache.value as! CVMetalTextureCache, 0)
+        }
     }
 }
 

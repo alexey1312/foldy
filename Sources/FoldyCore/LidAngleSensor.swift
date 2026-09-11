@@ -36,11 +36,18 @@ public final class LidAngleSensor: @unchecked Sendable {
     private var lastMovement: TimeInterval = 0
     private var receivedInputReport = false
     private var pollingFast = true
+    private var stopping = false
+    private var restartWanted = false
+    private var failedReads = 0
     private(set) public var availability: Availability = .searching
 
     private static let fastInterval: TimeInterval = 1.0 / 60.0
     private static let idleInterval: TimeInterval = 1.0 / 10.0
     private static let settleDelay: TimeInterval = 1.2
+    /// Consecutive unanswered feature reports before the sensor is called lost. At the
+    /// 10 Hz heartbeat that is two seconds of silence — long enough to ride out a hiccup,
+    /// short enough that the menu bar stops reporting an angle that has stopped moving.
+    private static let maxFailedReads = 20
 
     public init() {}
 
@@ -57,7 +64,14 @@ public final class LidAngleSensor: @unchecked Sendable {
     // MARK: - Queue-confined
 
     private func startOnQueue() {
-        guard manager == nil else { return }
+        guard manager == nil else {
+            // A cancel is still in flight; the cancel handler will start us again.
+            restartWanted = stopping
+            return
+        }
+        stopping = false
+        restartWanted = false
+        failedReads = 0
 
         if let reason = MacModel.current.reasonWithoutLid {
             publish(.unavailable(reason: reason))
@@ -99,7 +113,11 @@ public final class LidAngleSensor: @unchecked Sendable {
             // manager be released and the sensor let go of.
             let sensor = retained.takeUnretainedValue()
             sensor.manager = nil
+            sensor.stopping = false
+            let restart = sensor.restartWanted
+            sensor.restartWanted = false
             retained.release()
+            if restart { sensor.startOnQueue() }
         }
         IOHIDManagerSetDispatchQueue(manager, queue)
         // Open before activating so matched devices are usable from the callback.
@@ -125,7 +143,13 @@ public final class LidAngleSensor: @unchecked Sendable {
             IOHIDDeviceClose(device, options)
         }
         device = nil
+        lastAngle = nil
+        lastMovement = 0
+        receivedInputReport = false
+        pollingFast = true
+        failedReads = 0
         if let manager {
+            stopping = true
             IOHIDManagerClose(manager, options)
             IOHIDManagerCancel(manager) // the cancel handler clears `manager`
         }
@@ -140,13 +164,26 @@ public final class LidAngleSensor: @unchecked Sendable {
         self.device = device
         searchTimeout?.cancel()
 
-        guard let angle = readFeatureAngle() else {
+        let angle: Double
+        switch readFeature() {
+        case let .angle(value):
+            angle = value
+        case let .ioError(result):
             IOHIDDeviceClose(device, options)
             self.device = nil
-            publish(.unavailable(reason: "The lid angle sensor answered with a report this build does not understand."))
+            let code = String(UInt32(bitPattern: result), radix: 16)
+            FoldyLog.sensor.error("IOHIDDeviceGetReport failed with 0x\(code, privacy: .public)")
+            publish(.unavailable(reason: "The lid angle sensor refused to answer (IOKit 0x\(code))."))
+            return
+        case let .unparsable(length):
+            IOHIDDeviceClose(device, options)
+            self.device = nil
+            FoldyLog.sensor.error("unparsable lid report, \(length) bytes: \(self.reportBytes(length), privacy: .public)")
+            publish(.unavailable(reason: "The lid angle sensor answered with a \(length)-byte report this build does not understand."))
             return
         }
 
+        failedReads = 0
         publish(.available)
         deliver(angle)
         startPolling()
@@ -159,17 +196,40 @@ public final class LidAngleSensor: @unchecked Sendable {
         IOHIDDeviceClose(device, options)
         self.device = nil
         receivedInputReport = false
+        failedReads = 0
         publish(.searching)
+        // Without this the app says "Looking for the lid sensor…" for the rest of the
+        // session when a device goes away and never comes back.
+        let timeout = DispatchWorkItem { [weak self] in
+            guard let self, device == nil, availability == .searching else { return }
+            publish(.unavailable(reason: "The lid angle sensor stopped answering."))
+        }
+        searchTimeout = timeout
+        queue.asyncAfter(deadline: .now() + 2.5, execute: timeout)
     }
 
-    private func readFeatureAngle() -> Double? {
-        guard let device else { return nil }
+    /// One feature report, with the reason it failed kept — "no answer" and "an answer
+    /// this build cannot parse" send a bug report in completely different directions.
+    private enum ReadOutcome {
+        case angle(Double)
+        case ioError(IOReturn)
+        case unparsable(Int)
+    }
+
+    private func readFeature() -> ReadOutcome {
+        guard let device else { return .ioError(kIOReturnNoDevice) }
         var length = CFIndex(featureReport.count)
         let result = IOHIDDeviceGetReport(device, kIOHIDReportTypeFeature, LidAngleReport.reportID, &featureReport, &length)
-        guard result == kIOReturnSuccess else { return nil }
-        return featureReport.withUnsafeBufferPointer { buffer in
+        guard result == kIOReturnSuccess else { return .ioError(result) }
+        let angle = featureReport.withUnsafeBufferPointer { buffer in
             LidAngleReport.angle(in: UnsafeBufferPointer(rebasing: buffer.prefix(Int(length))))
         }
+        guard let angle else { return .unparsable(Int(length)) }
+        return .angle(angle)
+    }
+
+    private func reportBytes(_ length: Int) -> String {
+        featureReport.prefix(max(min(length, featureReport.count), 0)).map { String(format: "%02x", $0) }.joined(separator: " ")
     }
 
     private func startPolling() {
@@ -183,8 +243,27 @@ public final class LidAngleSensor: @unchecked Sendable {
     }
 
     private func poll() {
-        guard let angle = readFeatureAngle() else { return }
-        deliver(angle)
+        switch readFeature() {
+        case let .angle(angle):
+            if failedReads > 0 {
+                failedReads = 0
+                publish(.available)
+            }
+            deliver(angle)
+        case let .ioError(result):
+            noteFailedRead(detail: "0x" + String(UInt32(bitPattern: result), radix: 16))
+        case let .unparsable(length):
+            noteFailedRead(detail: "\(length) unparsable bytes")
+        }
+    }
+
+    /// A silent or unreadable sensor must not leave the menu bar reporting the angle it
+    /// froze at; say it is lost instead, and let a good read take it back.
+    private func noteFailedRead(detail: String) {
+        failedReads += 1
+        guard failedReads == Self.maxFailedReads else { return }
+        FoldyLog.sensor.error("lid sensor stopped answering (\(detail, privacy: .public))")
+        publish(.unavailable(reason: "Lost contact with the lid angle sensor (\(detail))."))
     }
 
     private func deliver(_ angle: Double) {
