@@ -30,21 +30,24 @@ if [ -f Support/Foldy.icns ]; then
 fi
 cp -R "$SPARKLE" "$APP/Contents/Frameworks/Sparkle.framework"
 
-if [ -n "${CODESIGN_IDENTITY:-}" ]; then
-  SIGN="codesign --force --options runtime --timestamp --sign $CODESIGN_IDENTITY"
-else
-  SIGN="codesign --force --sign -"
-fi
+# One signer for every piece; the identity carries spaces, so it stays quoted here.
+sign() {
+  if [ -n "${CODESIGN_IDENTITY:-}" ]; then
+    codesign --force --options runtime --timestamp --sign "$CODESIGN_IDENTITY" "$@"
+  else
+    codesign --force --sign - "$@"
+  fi
+}
 FW="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
-$SIGN "$FW/XPCServices/Installer.xpc"
-$SIGN --preserve-metadata=entitlements "$FW/XPCServices/Downloader.xpc"
-$SIGN "$FW/Autoupdate"
-$SIGN "$FW/Updater.app"
-$SIGN "$APP/Contents/Frameworks/Sparkle.framework"
+sign "$FW/XPCServices/Installer.xpc"
+sign --preserve-metadata=entitlements "$FW/XPCServices/Downloader.xpc"
+sign "$FW/Autoupdate"
+sign "$FW/Updater.app"
+sign "$APP/Contents/Frameworks/Sparkle.framework"
 if [ -n "${CODESIGN_IDENTITY:-}" ]; then
-  $SIGN --entitlements Support/Foldy.entitlements "$APP"
+  sign --entitlements Support/Foldy.entitlements "$APP"
   echo "signed $APP as $CODESIGN_IDENTITY"
 else
-  $SIGN --identifier dev.alexey1312.Foldy "$APP"
+  sign --identifier dev.alexey1312.Foldy "$APP"
   echo "built $APP (ad-hoc signed)"
 fi
