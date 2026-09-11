@@ -33,8 +33,8 @@ and IOKit. No account, no license key, no network code.
   the angle where the fold completes.
 - **Take a closer look.** Settings shows a 3D MacBook, rendered by the same
   Metal code as the overlay, on a lit stage with the lid control floating over it
-  — the interaction from Apple's iPhone Duo page, with Open / Halfway / Closed /
-  Silk / Shade / Frost pills below.
+  — the interaction from Apple's iPhone Duo page, with Open / Halfway / Closed pills
+  below and the Silk / Shade / Frost thumbnails under them.
 - **Liquid Glass.** On macOS 26 Tahoe the floating lid control, the state pills and
   every button in Settings and the welcome tour are drawn in Liquid Glass, grouped
   into `GlassEffectContainer`s so neighbours share one backdrop and morph into each
@@ -65,9 +65,11 @@ lid still works: the settings preview, the style thumbnails and *Try It Now*.
 Download the [latest DMG](https://github.com/alexey1312/foldy/releases/latest/download/Foldy.dmg)
 — or take `Foldy-x.y.z.dmg`, the zip or the checksums from the
 [releases page](https://github.com/alexey1312/foldy/releases) — and drag Foldy to
-Applications. The build is ad-hoc signed, not notarized, so macOS blocks the first
-launch: open it once, then go to System Settings › Privacy & Security, scroll to the
-message about Foldy and click **Open Anyway**. Or clear the quarantine flag first:
+Applications. Releases are signed with a Developer ID and notarized, so the app opens
+without a warning. A build you make yourself with `make app` is ad-hoc signed and macOS
+blocks its first launch: open it once, then go to System Settings › Privacy & Security,
+scroll to the message about Foldy and click **Open Anyway**. Or clear the quarantine
+flag first:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Foldy.app
@@ -87,9 +89,10 @@ push builds the package, runs the tests and bundles the app.
 
 ### Signing
 
-Releases are ad-hoc signed until the repository has signing secrets. With them, the
-workflow signs the app with a Developer ID (hardened runtime, timestamp), notarizes
-it and the DMG, and staples both, so the download opens without any warning.
+With the signing secrets below in place, the workflow signs the app with a Developer
+ID (hardened runtime, timestamp), notarizes it and the DMG, and staples both, so the
+download opens without any warning. Without them a release falls back to ad-hoc
+signing and says so in its notes.
 
 1. Join the Apple Developer Program and note the Team ID (Membership page).
 2. Xcode › Settings › Accounts › Manage Certificates › + › **Developer ID Application**.

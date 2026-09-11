@@ -6,6 +6,7 @@ struct FoldSlider: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dragging = false
 
     private let thumbSize: CGFloat = 40
@@ -37,9 +38,9 @@ struct FoldSlider: View {
                     .foregroundStyle(.white)
                 }
                 .frame(width: thumbSize, height: thumbSize)
-                .scaleEffect(dragging ? 1.08 : 1)
+                .scaleEffect(dragging && !reduceMotion ? 1.08 : 1)
                 .offset(x: x)
-                .animation(.spring(duration: 0.25), value: dragging)
+                .decorativeAnimation(.spring(duration: 0.25), value: dragging)
             }
             .contentShape(Rectangle())
             .gesture(

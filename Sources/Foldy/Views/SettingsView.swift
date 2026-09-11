@@ -156,3 +156,19 @@ struct RowDivider: View {
         Divider().padding(.leading, 16)
     }
 }
+
+/// A row whose accessory is a switch. The switch takes the row's title as its label and
+/// hides it: the row shows the text, VoiceOver still gets a name rather than "switch".
+struct SettingsToggleRow: View {
+    let title: String
+    var subtitle: String? = nil
+    @Binding var isOn: Bool
+
+    var body: some View {
+        SettingsRow(title: title, subtitle: subtitle) {
+            Toggle(title, isOn: $isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+        }
+    }
+}
