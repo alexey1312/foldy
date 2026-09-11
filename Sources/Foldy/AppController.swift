@@ -234,7 +234,7 @@ final class AppController {
     /// Opens Settings from AppKit code. The menu uses `SettingsLink`; this is for the
     /// command-line switches, where the SwiftUI scene may not answer, so it falls back
     /// to hosting the same view in a window of its own.
-    func openSettings(hosted: Bool = false, pane: SettingsView.Pane = .appearance) {
+    func openSettings(hosted: Bool = false, pane: SettingsView.Pane = .appearance, height: Double? = nil) {
         NSApp.activate()
         if !hosted {
             for name in ["showSettingsWindow:", "showPreferencesWindow:"] where NSApp.sendAction(Selector(name), to: nil, from: nil) {
@@ -251,6 +251,9 @@ final class AppController {
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false
+        if let height {
+            window.setContentSize(NSSize(width: 940, height: height))
+        }
         window.center()
         window.makeKeyAndOrderFront(nil)
         settingsWindow = window

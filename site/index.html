@@ -225,7 +225,7 @@
 
   /* The 3D MacBook: a lid that swings on its hinge over a flat deck. */
   .scene { perspective: 1400px; perspective-origin: 50% 38%; width: 100%; aspect-ratio: 1.3; position: relative; }
-  .rig { position: absolute; left: 50%; top: 50%; width: 76%; transform-style: preserve-3d; transform: translate(-50%, -82%) rotateX(20deg); }
+  .rig { position: absolute; left: 50%; top: 50%; width: 76%; transform-style: preserve-3d; transform: translate(-50%, -72%) rotateX(-20deg); } /* a touch from above */
   .rig, .rig * { transform-style: preserve-3d; }
   .lid3d { position: relative; width: 100%; aspect-ratio: 1.63 / 1.1; transform-origin: 50% 100%; will-change: transform; }
   .lid3d .face { position: absolute; inset: 0; border-radius: 6.5% / 9.6%; backface-visibility: hidden; }
@@ -238,7 +238,7 @@
   .lid3d .back::after { content: ''; position: absolute; left: 50%; top: 50%; width: 14%; aspect-ratio: 1; transform: translate(-50%, -50%) scaleX(-1); border-radius: 22%; background: rgba(255,255,255,.18); }
   .deck3d {
     position: absolute; left: 0; right: 0; top: 100%; height: 0; padding-top: 68%;
-    transform-origin: 50% 0; transform: rotateX(-90deg); border-radius: 2.2%; background: var(--deck);
+    transform-origin: 50% 0; transform: rotateX(90deg); border-radius: 2.2%; background: var(--deck); /* lies flat, toward the viewer */
     backface-visibility: visible;
   }
   .deck3d::before { content: ''; position: absolute; left: 50%; bottom: 0; width: 24%; height: 3.2%; transform: translateX(-50%); border-radius: 12px 12px 0 0; background: var(--deck-lip); }

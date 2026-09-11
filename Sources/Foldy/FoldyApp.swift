@@ -37,7 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 /// Command-line switches for development. None of them are needed to use the app.
 ///
-///   --settings [--pane general|appearance|about]   open Settings at launch
+///   --settings [--pane general|appearance|about] [--window-height N]   open Settings at launch
 ///   --screenshot-settings <png>      open Settings, capture the window, quit
 ///   --screenshot-fold <png>          fold the sample wallpaper, capture the overlay, quit
 ///
@@ -56,8 +56,9 @@ enum DevFlags {
             // The SwiftUI Settings scene claims the selector but shows nothing when the
             // process is started from a shell, so host the same view in a plain window.
             let pane = value(after: "--pane").flatMap(SettingsView.Pane.init(rawValue:)) ?? .appearance
+            let height = value(after: "--window-height").flatMap(Double.init)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                AppController.shared.openSettings(hosted: true, pane: pane)
+                AppController.shared.openSettings(hosted: true, pane: pane, height: height)
             }
         }
         if let path = value(after: "--screenshot-settings") {
