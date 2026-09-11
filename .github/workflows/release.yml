@@ -43,14 +43,31 @@ jobs:
           KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
           KEYCHAIN_PASSWORD="$(uuidgen)"
           echo "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          echo "p12: $(stat -f %z "$RUNNER_TEMP/cert.p12") bytes, password $([ -n "$CERT_PASSWORD" ] && echo set || echo EMPTY)"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          # Apple's intermediates, so the identity chains and counts as valid.
+          curl -sSfL -o "$RUNNER_TEMP/DeveloperIDG2CA.cer" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          curl -sSfL -o "$RUNNER_TEMP/DeveloperIDCA.cer" https://www.apple.com/certificateauthority/DeveloperIDCA.cer
+          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$KEYCHAIN" -T /usr/bin/codesign >/dev/null || true
+          security import "$RUNNER_TEMP/DeveloperIDCA.cer" -k "$KEYCHAIN" -T /usr/bin/codesign >/dev/null || true
+          if ! security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"; then
+            echo "::error::Could not import the .p12. A wrong MACOS_CERTIFICATE_PASSWORD gives 'MAC verification failed'; a broken MACOS_CERTIFICATE_P12 (not base64 of the .p12) gives 'Unable to import'."
+            exit 1
+          fi
           security list-keychains -d user -s "$KEYCHAIN" login.keychain
+          if ! security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null; then
+            echo "::error::The .p12 holds no private key. In Keychain Access open the disclosure triangle on 'Developer ID Application: …', select the certificate AND the key beneath it, and export both as one .p12."
+            exit 1
+          fi
+          echo "Identities:"
+          security find-identity -v -p codesigning "$KEYCHAIN" || true
           IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN" | grep 'Developer ID Application' | head -1 | sed -E 's/.*"(.*)".*/\1/')"
-          test -n "$IDENTITY"
+          if [ -z "$IDENTITY" ]; then
+            echo "::error::No valid 'Developer ID Application' identity after import. The certificate must be of type Developer ID Application (not Apple Development) and carry its private key."
+            exit 1
+          fi
           echo "CODESIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
           rm "$RUNNER_TEMP/cert.p12"
 
