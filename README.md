@@ -63,7 +63,10 @@ message about Foldy and click **Open Anyway**. Or clear the quarantine flag firs
 xattr -dr com.apple.quarantine /Applications/Foldy.app
 ```
 
-Then allow Screen Recording when macOS asks, and reopen the app.
+On the first launch Foldy asks for Screen Recording and opens its General pane.
+Allow it in System Settings, then choose **Relaunch Foldy** from the menu bar: macOS
+gives the permission to a fresh process only. Until then Foldy folds a sample
+wallpaper instead of the live desktop.
 
 Releases are cut by `.github/workflows/release.yml` from a `v*` tag; CI on every
 push builds the package, runs the tests and bundles the app.

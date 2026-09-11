@@ -65,13 +65,18 @@ struct GeneralSettingsView: View {
 
             SettingsCard(title: "Screen Recording") {
                 SettingsRow(title: controller.hasScreenPermission ? "Allowed" : "Not allowed",
-                            subtitle: "Foldy captures the display to fold it. Frames stay on this Mac; nothing is recorded, saved or uploaded.") {
+                            subtitle: "Foldy folds the live desktop only with this permission; until then it folds the sample wallpaper. Frames stay on this Mac; nothing is recorded, saved or uploaded.") {
                     Image(systemName: controller.hasScreenPermission ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .foregroundStyle(controller.hasScreenPermission ? .green : .red)
                 }
-                if !controller.hasScreenPermission {
+                if controller.needsRelaunchForPermission {
                     RowDivider()
-                    SettingsRow(title: "Grant access", subtitle: "macOS asks once. If it already said no, allow Foldy in System Settings, then reopen the app.") {
+                    SettingsRow(title: "Relaunch to start capturing", subtitle: "macOS hands a new Screen Recording permission to a fresh process only.") {
+                        Button("Relaunch Foldy") { controller.relaunch() }
+                    }
+                } else if !controller.hasScreenPermission {
+                    RowDivider()
+                    SettingsRow(title: "Grant access", subtitle: "macOS asks once. If it already said no, allow Foldy in System Settings, then relaunch the app.") {
                         HStack {
                             Button("Request…") { controller.requestScreenPermission() }
                             Button("System Settings…") { controller.openScreenRecordingSettings() }

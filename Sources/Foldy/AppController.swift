@@ -40,6 +40,11 @@ final class AppController {
     private(set) var sensorAvailability: LidAngleSensor.Availability = .searching
     private(set) var captureState: DisplayCapture.State = .idle
     private(set) var hasScreenPermission = DisplayCapture.hasPermission()
+    /// Screen Recording was granted while Foldy was running; macOS applies it to a
+    /// fresh process, so the live desktop needs a relaunch.
+    private(set) var needsRelaunchForPermission = false
+    @ObservationIgnored private var lastPermissionCheck = Date.distantPast
+    private static let promptedForScreenRecordingKey = "app.foldy.promptedForScreenRecording"
     /// Set from the menu. Nothing folds until resumed.
     private(set) var isPaused = false
     /// Set by a click or Esc on the fold. Clears once the lid opens past the clear angle.
@@ -74,7 +79,7 @@ final class AppController {
     }
 
     var usesSampleWallpaper: Bool {
-        forcesSampleWallpaper || settings.sampleWallpaper || !hasScreenPermission
+        forcesSampleWallpaper || settings.sampleWallpaper || !hasScreenPermission || needsRelaunchForPermission
     }
 
     var statusLine: String {
@@ -84,6 +89,7 @@ final class AppController {
         case .searching: return "Looking for the lid sensor…"
         case let .unavailable(reason): return reason
         case .available:
+            if needsRelaunchForPermission { return "Screen Recording allowed · relaunch Foldy to use it" }
             if case let .failed(message) = captureState { return "Capture failed: \(message)" }
             if !hasScreenPermission, !settings.sampleWallpaper { return "Lid at \(Int(lidAngle.rounded()))° · Screen Recording needed" }
             return "Lid at \(Int(lidAngle.rounded()))°"
@@ -145,8 +151,26 @@ final class AppController {
             MainActor.assumeIsolated { AppController.shared.screenChanged() }
         })
 
+        observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { AppController.shared.refreshPermission() }
+        })
+
         sensor.start()
         evaluate()
+        promptForScreenRecordingIfNeeded()
+    }
+
+    /// The first launch without Screen Recording asks macOS for it, which lists Foldy
+    /// in System Settings, and opens General so the switch and the reason are in view.
+    private func promptForScreenRecordingIfNeeded() {
+        guard !hasScreenPermission, !settings.sampleWallpaper else { return }
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: Self.promptedForScreenRecordingKey) else { return }
+        defaults.set(true, forKey: Self.promptedForScreenRecordingKey)
+        DisplayCapture.requestPermission()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            self.openSettings(hosted: true, pane: .general)
+        }
     }
 
     func stop() {
@@ -214,8 +238,23 @@ final class AppController {
     }
 
     func refreshPermission() {
-        hasScreenPermission = DisplayCapture.hasPermission()
+        lastPermissionCheck = Date()
+        let granted = DisplayCapture.hasPermission()
+        if granted, !hasScreenPermission {
+            // Granted since launch. The capture would still be refused in this process.
+            needsRelaunchForPermission = true
+        }
+        hasScreenPermission = granted
         evaluate()
+    }
+
+    /// Starts a fresh copy of the app and quits this one.
+    func relaunch() {
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+        }
     }
 
     func requestScreenPermission() {
@@ -263,6 +302,14 @@ final class AppController {
 
     /// Re-reads every input and makes the overlay, the capture and the sound match.
     func evaluate() {
+        // Without the permission, look for it now and then; the user may have just flipped the switch.
+        if !hasScreenPermission, Date().timeIntervalSince(lastPermissionCheck) > 3 {
+            lastPermissionCheck = Date()
+            if DisplayCapture.hasPermission() {
+                needsRelaunchForPermission = true
+                hasScreenPermission = true
+            }
+        }
         let curve = settings.curve
         let angle = effectiveAngle
         if isDismissed, angle >= curve.clearAngle { isDismissed = false }

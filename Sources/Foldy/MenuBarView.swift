@@ -7,6 +7,11 @@ struct MenuBarView: View {
 
     var body: some View {
         Text(controller.statusLine)
+        if controller.needsRelaunchForPermission {
+            Button("Relaunch Foldy") { controller.relaunch() }
+        } else if !controller.hasScreenPermission, !controller.settings.sampleWallpaper {
+            Button("Allow Screen Recording…") { controller.openScreenRecordingSettings() }
+        }
         Divider()
         Button(controller.isPaused ? "Resume" : "Pause") {
             controller.togglePause()
