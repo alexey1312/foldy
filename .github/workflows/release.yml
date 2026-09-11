@@ -149,6 +149,16 @@ jobs:
           # Keep earlier items: start from the appcast on main.
           git fetch --depth 1 origin main
           git show origin/main:site/appcast.xml > "$WORK/appcast.xml" 2>/dev/null || rm -f "$WORK/appcast.xml"
+          # A re-run of this tag replaces its own item rather than adding a second one.
+          if [ -f "$WORK/appcast.xml" ]; then
+            python3 - "$WORK/appcast.xml" "$VERSION" <<'PY'
+          import re, sys
+          path, version = sys.argv[1], sys.argv[2]
+          xml = open(path).read()
+          xml = re.sub(r'\s*<item>(?:(?!</item>).)*?<sparkle:shortVersionString>' + re.escape(version) + r'</sparkle:shortVersionString>(?:(?!</item>).)*?</item>', '', xml, flags=re.S)
+          open(path, 'w').write(xml)
+          PY
+          fi
           echo "$SPARKLE_PRIVATE_KEY" | "$RUNNER_TEMP/sparkle/bin/generate_appcast" \
             --ed-key-file - \
             --download-url-prefix "https://github.com/alexey1312/foldy/releases/download/$GITHUB_REF_NAME/" \
