@@ -37,7 +37,7 @@
 	<key>NSSupportsSuddenTermination</key>
 	<false/>
 	<key>SUFeedURL</key>
-	<string>https://alexey1312.github.io/foldy/appcast.xml</string>
+	<string>https://foldy.proteinunit.dev/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>1n+myq33bFzZd+PI7wcBe1jBpmNmY6tG6EcpdtOUWiA=</string>
 	<key>SUEnableAutomaticChecks</key>

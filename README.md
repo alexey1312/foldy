@@ -1,6 +1,6 @@
 # Foldy
 
-**Your desktop bends as you close the lid.** · [foldy on GitHub Pages](https://alexey1312.github.io/foldy/)
+**Your desktop bends as you close the lid.** · [foldy.proteinunit.dev](https://foldy.proteinunit.dev/)
 
 The fluid fold from iPhone Duo, for the MacBook you already have. As the lid comes
 down, Foldy captures the desktop and draws it back as a sheet that tilts, bends,
@@ -215,11 +215,17 @@ site/appcast.xml        Sparkle feed, written by the release workflow.
 ## The landing page
 
 `site/index.html` is a single file, published to GitHub Pages at
-<https://alexey1312.github.io/foldy/> by `.github/workflows/pages.yml` on every
+<https://foldy.proteinunit.dev/> by `.github/workflows/pages.yml` on every
 push to `main`. It ports the Metal shader to WebGL 2, so the MacBook at the top of
 the page bends as you scroll exactly the way the app bends the desktop, and the
 "Take a closer look" section swings a CSS 3D lid on its hinge with the fold on its
 screen. Open the file in a browser, or serve the folder.
+
+The custom domain is `site/CNAME` plus the same name in Settings › Pages. DNS
+lives at Cloudflare: `foldy` CNAME `alexey1312.github.io`, proxy **off** (grey
+cloud) so GitHub can issue the certificate and `.dev`, which is HSTS-preloaded,
+stays reachable. `alexey1312.github.io/foldy/` keeps 301-ing to the domain, which
+is what carries Sparkle feeds baked into copies older than 0.1.5.
 
 ## Status
 
