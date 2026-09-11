@@ -148,8 +148,12 @@ Useful while developing; none are needed to use the app.
 | Switch | What it does |
 | --- | --- |
 | `--settings [--pane general\|appearance\|about]` | Opens Settings at launch |
-| `--screenshot-settings out.png` | Opens Settings, captures the window, quits |
+| `--screenshot-settings out.png [--window-height N] [--scroll N]` | Opens Settings, captures the window, quits |
 | `--screenshot-fold out.png` | Folds the sample wallpaper on the real display, captures the overlay, quits |
+| `--onboarding` | Opens the welcome tour at launch |
+| `--screenshot-onboarding out.png [--step 0-4]` | Opens the tour at a step, captures the window, quits |
+
+Screenshot runs keep Sparkle dormant and never touch the persisted settings.
 
 `foldy-snapshot` renders without a window:
 
@@ -174,15 +178,24 @@ Sources/FoldyCore       The parts that need no window.
   WallpaperArt.swift      The sample lock screen, drawn with CoreGraphics.
   FoldSound.swift         The click, synthesised with AVAudioEngine.
 Sources/Foldy           The menu bar app.
-  AppController.swift     Sensor + capture + overlay + sound, and the decisions between them.
+  FoldyApp.swift          The scenes, the app delegate, the command-line switches (DevFlags).
+  AppController.swift     Sensor + capture + overlay + sound + permission, and the decisions between them.
+  SettingsStore.swift     Persisted settings, coalesced into one UserDefaults write.
   OverlayWindowController.swift  The full-screen window; click or Esc dismisses.
+  Updater.swift           Sparkle, dormant outside a bundle and in screenshot runs.
+  Onboarding/             The welcome tour: five steps, resumes after a relaunch.
   Views/                  Settings panes, the drag-to-open slider, the Metal preview views.
 Sources/FoldySnapshot   Renders PNGs of the fold and the preview.
 Tests/FoldyCoreTests    Swift Testing suites.
-Support/Info.plist      The app bundle's plist (LSUIElement, bundle id).
-Scripts/bundle.sh       Builds Foldy.app from the SwiftPM product.
+Support/Info.plist      The app bundle's plist: LSUIElement, bundle id, Sparkle feed and key.
+Support/Foldy.entitlements  Hardened runtime, nothing relaxed.
+Support/Foldy.icns      The icon, rendered by Scripts/make-icon.sh from the preview scene.
+Scripts/bundle.sh       Builds Foldy.app: embeds Sparkle.framework, signs nested code, then the app.
+.github/workflows       ci (build, test, bundle), pages (site/), release (tag → signed,
+                        notarized zip + DMG, appcast).
 site/index.html         The landing page: the same fold in WebGL, scroll-driven, plus
                         the drag-to-open 3D lid. No build step, no dependencies.
+site/appcast.xml        Sparkle feed, written by the release workflow.
 ```
 
 ## The landing page
@@ -196,12 +209,18 @@ screen. Open the file in a browser, or serve the folder.
 
 ## Status
 
-Built and checked on a Mac mini (M4 Pro, macOS 26.6, Xcode 27 beta):
+Built and checked on a Mac mini (M4 Pro, macOS 26.6, Xcode 27 beta) and on the
+GitHub `macos-15` runner:
 
-- `swift build`, `swift test` (12 tests) and `make app` pass.
-- The renderer, the 3D preview, the settings window and the full-screen overlay
-  were exercised with the sample wallpaper: `--screenshot-fold` runs *Try It Now*
-  on the real display and captures the result (`docs/fold-overlay.png`).
+- `swift build`, `swift test` (12 tests) and `make app` pass on both.
+- The renderer, the 3D preview, the settings window, the welcome tour and the
+  full-screen overlay were exercised with the sample wallpaper: `--screenshot-fold`
+  runs *Try It Now* on the real display and captures the result
+  (`docs/fold-overlay.png`).
+- Release 0.1.3 from the workflow verifies as `Notarized Developer ID` with
+  `spctl`, and `stapler validate` passes for the app and the DMG.
+- The Sparkle key pair was checked end to end: a signature from `sign_update`
+  verifies against the `SUPublicEDKey` in `Info.plist`.
 
 Not yet checked, because this machine has no lid and no Screen Recording grant:
 
@@ -223,5 +242,6 @@ Not yet checked, because this machine has no lid and no Screen Recording grant:
   shape of its landing page; the code is new.
 - [LidAngleSensor](https://github.com/samhenrigold/LidAngleSensor) by Sam Henri
   Gold, for the HID details of the hinge sensor.
+- [Sparkle](https://sparkle-project.org), for the updates.
 
 MIT licensed. See `LICENSE`.
