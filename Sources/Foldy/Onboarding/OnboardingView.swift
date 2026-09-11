@@ -11,6 +11,7 @@ struct OnboardingView: View {
     @State private var step: Step
     @State private var direction: Edge = .trailing
     @Namespace private var footerGlass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(controller: AppController, initialStep: Int, onFinish: @escaping () -> Void) {
         self.controller = controller
@@ -36,8 +37,7 @@ struct OnboardingView: View {
                 }
             }
             .id(step)
-            .transition(.asymmetric(insertion: .move(edge: direction).combined(with: .opacity),
-                                    removal: .move(edge: direction == .trailing ? .leading : .trailing).combined(with: .opacity)))
+            .transition(stepTransition)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 48)
             .padding(.top, 36)
@@ -60,15 +60,30 @@ struct OnboardingView: View {
         }
     }
 
+    /// Slide with the direction of travel; a plain fade when Reduce Motion is on.
+    private var stepTransition: AnyTransition {
+        if reduceMotion { return .opacity }
+        return .asymmetric(insertion: .move(edge: direction).combined(with: .opacity),
+                           removal: .move(edge: direction == .trailing ? .leading : .trailing).combined(with: .opacity))
+    }
+
+    /// The steps the eyebrows count, "Step 1 of 4": the welcome screen is the cover,
+    /// not a step, so it gets no dot and shows none.
+    private static let countedSteps = Step.allCases.filter { $0 != .welcome }
+
     private var footer: some View {
         HStack(spacing: 14) {
-            HStack(spacing: 7) {
-                ForEach(Step.allCases, id: \.rawValue) { s in
-                    Capsule()
-                        .fill(s == step ? Color.primary : Color.primary.opacity(0.18))
-                        .frame(width: s == step ? 22 : 7, height: 7)
-                        .animation(.spring(duration: 0.35), value: step)
+            if step != .welcome {
+                HStack(spacing: 7) {
+                    ForEach(Self.countedSteps, id: \.rawValue) { s in
+                        Capsule()
+                            .fill(s == step ? Color.primary : Color.primary.opacity(0.18))
+                            .frame(width: s == step ? 22 : 7, height: 7)
+                            .animation(reduceMotion ? nil : .spring(duration: 0.35), value: step)
+                    }
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Step \(step.rawValue) of \(Self.countedSteps.count)")
             }
             Spacer()
             GlassGroup(spacing: 14) {
@@ -87,9 +102,12 @@ struct OnboardingView: View {
                             .glassButtonStyle(.prominent)
                             .glassMorphID("forward", in: footerGlass)
                     } else {
+                        // Skipping the permission is the way out, not the point of the
+                        // step; the prominent button on that screen is Allow Screen
+                        // Recording, inside the card.
                         Button(continueTitle) { go(1) }
                             .keyboardShortcut(.defaultAction)
-                            .glassButtonStyle(.prominent)
+                            .glassButtonStyle(isSkipping ? .standard : .prominent)
                             .glassMorphID("forward", in: footerGlass)
                             .disabled(step == .capture && controller.needsRelaunchForPermission)
                     }
@@ -102,17 +120,18 @@ struct OnboardingView: View {
         .overlay(alignment: .top) { Divider() }
     }
 
+    private var isSkipping: Bool {
+        step == .capture && !controller.hasScreenPermission
+    }
+
     private var continueTitle: String {
-        switch step {
-        case .capture where !controller.hasScreenPermission: "Skip for now"
-        default: "Continue"
-        }
+        isSkipping ? "Skip for Now" : "Continue"
     }
 
     private func go(_ delta: Int) {
         guard let next = Step(rawValue: step.rawValue + delta) else { return }
         direction = delta > 0 ? .trailing : .leading
-        withAnimation(.spring(duration: 0.45, bounce: 0.1)) { step = next }
+        withAnimation(reduceMotion ? .easeOut(duration: 0.15) : .spring(duration: 0.45, bounce: 0.1)) { step = next }
     }
 
     private func finish() {
@@ -186,17 +205,30 @@ private func demoAngle(at time: TimeInterval) -> Double {
 private struct WelcomeStep: View {
     var controller: AppController
     private let start = Date()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 22) {
             if let graphics = controller.graphics {
-                TimelineView(.periodic(from: start, by: 1.0 / 30.0)) { context in
-                    MacBookPreviewView(
-                        graphics: graphics,
-                        lidAngle: demoAngle(at: context.date.timeIntervalSince(start)),
-                        parameters: controller.settings.parameters,
-                        curve: controller.settings.curve
-                    )
+                Group {
+                    if reduceMotion {
+                        // A still of the lid part-way down says what the loop says.
+                        MacBookPreviewView(
+                            graphics: graphics,
+                            lidAngle: controller.settings.curve.angle(forFraction: 0.6),
+                            parameters: controller.settings.parameters,
+                            curve: controller.settings.curve
+                        )
+                    } else {
+                        TimelineView(.periodic(from: start, by: 1.0 / 30.0)) { context in
+                            MacBookPreviewView(
+                                graphics: graphics,
+                                lidAngle: demoAngle(at: context.date.timeIntervalSince(start)),
+                                parameters: controller.settings.parameters,
+                                curve: controller.settings.curve
+                            )
+                        }
+                    }
                 }
                 .frame(height: 300)
             }
@@ -253,6 +285,7 @@ private struct LidGauge: View {
     let angle: Double
     let curve: FoldCurve
     let live: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Canvas { context, size in
@@ -289,8 +322,11 @@ private struct LidGauge: View {
             let label = Text("\(Int(angle.rounded()))°").font(.system(size: 26, weight: .semibold).monospacedDigit())
             context.draw(label, at: CGPoint(x: size.width * 0.78, y: size.height * 0.22))
         }
-        .animation(.spring(duration: 0.35), value: angle)
+        .animation(reduceMotion ? nil : .spring(duration: 0.35), value: angle)
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.quaternary.opacity(0.4)))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Lid angle")
+        .accessibilityValue(live ? "\(Int(angle.rounded())) degrees" : "No sensor")
     }
 }
 
@@ -372,7 +408,7 @@ private struct StyleStep: View {
                 .controlSize(.large)
                 .disabled(controller.isSweeping || controller.isPaused)
                 Text(controller.usesSampleWallpaper
-                     ? "Screen Recording is not active in this process, so this shows the sample wallpaper."
+                     ? "Without Screen Recording this folds the sample wallpaper."
                      : "Watch the whole screen.")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
@@ -406,7 +442,7 @@ private struct DoneStep: View {
             }
             SettingsCard {
                 SettingsRow(title: "Launch at login") {
-                    Toggle("", isOn: $launchAtLogin).labelsHidden().toggleStyle(.switch)
+                    Toggle("Launch at login", isOn: $launchAtLogin).labelsHidden().toggleStyle(.switch)
                         .onChange(of: launchAtLogin) { _, enabled in
                             guard enabled != settings.launchAtLogin else { return }
                             do { try settings.setLaunchAtLogin(enabled); launchError = nil }
@@ -418,7 +454,7 @@ private struct DoneStep: View {
                 }
                 RowDivider()
                 SettingsRow(title: "Sound", subtitle: "A soft click when the lid opens and the desktop clears.") {
-                    Toggle("", isOn: $settings.soundEnabled).labelsHidden().toggleStyle(.switch)
+                    Toggle("Sound", isOn: $settings.soundEnabled).labelsHidden().toggleStyle(.switch)
                 }
             }
         }

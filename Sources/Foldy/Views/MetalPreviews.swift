@@ -122,11 +122,25 @@ final class ThumbnailMetalView: MTKView {
     var renderer: FoldRenderer?
     var commandQueue: MTLCommandQueue?
 
+    /// The stage the folded sheet sits on. It follows the window's appearance: a dark
+    /// stage in a light window was three black slabs in an otherwise pale pane.
+    private var stageColor: MTLClearColor {
+        let dark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        return dark
+            ? MTLClearColor(red: 0.07, green: 0.07, blue: 0.075, alpha: 1)
+            : MTLClearColor(red: 0.86, green: 0.865, blue: 0.885, alpha: 1)
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         guard let renderer, let commandQueue, let drawable = currentDrawable,
               let commandBuffer = commandQueue.makeCommandBuffer() else { return }
         renderer.step()
-        renderer.encode(into: commandBuffer, target: drawable.texture, clearColor: MTLClearColor(red: 0.07, green: 0.07, blue: 0.075, alpha: 1))
+        renderer.encode(into: commandBuffer, target: drawable.texture, clearColor: stageColor)
         commandBuffer.present(drawable)
         commandBuffer.commit()
     }

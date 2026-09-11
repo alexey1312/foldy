@@ -25,15 +25,18 @@ extension View {
     /// title invisible in the window that has focus — which is the only window anyone is
     /// looking at. Untinted, the label keeps its normal contrast.
     ///
-    /// `.glassProminent` ignores a tint here and draws a high-contrast capsule instead:
-    /// white on a light window, near-white on a dark one. That is the system's idea of
-    /// prominent, so nothing passes a tint to it either.
+    /// `.glassProminent` ignores a tint on macOS, explicit or not, and draws a
+    /// monochrome capsule: white on a light window, near-white on a dark one. In the
+    /// light appearance that is the same colour as the plain `.glass` next to it, so the
+    /// one action a screen is about looked no heavier than its neighbour. Prominent is
+    /// therefore ``ProminentGlassButtonStyle``: the same glass, tinted with the accent,
+    /// the way `.borderedProminent` has always been.
     @ViewBuilder
     func glassButtonStyle(_ prominence: GlassButtonProminence = .standard, tint: Color? = nil) -> some View {
         if #available(macOS 26.0, *) {
             switch prominence {
             case .standard: buttonStyle(.glass).tint(tint)
-            case .prominent: buttonStyle(.glassProminent).tint(tint)
+            case .prominent: buttonStyle(ProminentGlassButtonStyle(tint: tint ?? .accentColor))
             }
         } else {
             switch prominence {
@@ -64,6 +67,60 @@ extension View {
             glassEffectID(id, in: namespace)
         } else {
             self
+        }
+    }
+}
+
+/// The accent-coloured primary button: a capsule of `tint` with clear Liquid Glass
+/// over it, so the colour is the backdrop the glass refracts. `Glass.tint` alone was
+/// tried first and came out as a faint wash on macOS, no heavier than plain glass;
+/// `.regular` over the capsule whitened the accent to a pale cyan in the light
+/// appearance. `.clear` leaves the colour alone and keeps the rim, the highlight and
+/// `.interactive()`'s response to the pointer. Sized to sit beside `.glass` buttons
+/// of the same `controlSize`.
+@available(macOS 26.0, *)
+struct ProminentGlassButtonStyle: ButtonStyle {
+    var tint: Color
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.controlSize) private var controlSize
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: fontSize, weight: .medium))
+            .foregroundStyle(.white)
+            .padding(.horizontal, horizontalPadding)
+            .frame(minHeight: height)
+            .contentShape(.capsule)
+            .glassEffect(.clear.interactive(), in: .capsule)
+            .background(Capsule().fill(tint))
+            .opacity(isEnabled ? 1 : 0.45)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+
+    private var height: CGFloat {
+        switch controlSize {
+        case .mini: 18
+        case .small: 20
+        case .large, .extraLarge: 32
+        default: 24
+        }
+    }
+
+    private var horizontalPadding: CGFloat {
+        switch controlSize {
+        case .mini, .small: 9
+        case .large, .extraLarge: 16
+        default: 12
+        }
+    }
+
+    private var fontSize: CGFloat {
+        switch controlSize {
+        case .mini: 9
+        case .small: 11
+        case .large, .extraLarge: 15
+        default: 13
         }
     }
 }

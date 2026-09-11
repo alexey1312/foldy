@@ -9,9 +9,17 @@
 <meta property="og:site_name" content="Foldy">
 <meta property="og:title" content="Foldy">
 <meta property="og:description" content="Your desktop bends as you close the lid. The fluid fold from iPhone Duo, for the MacBook you already have.">
+<meta property="og:url" content="https://foldy.proteinunit.dev/">
+<meta property="og:image" content="https://foldy.proteinunit.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A MacBook desktop folded over toward the hinge, blurred and shaded at the top.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#ecedf2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0e13" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23111' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 16V7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2.5'/%3E%3Cpath d='M2.5 16h15'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<!-- System type only. The one platform that can run Foldy ships SF Pro, and a web
+     font request would be the page's only third-party connection. -->
 <style>
   /* ===========================================================================
      Tokens. Two schemes, one material. Liquid Glass in dark mode is smoked
@@ -56,13 +64,6 @@
       0 1px 2px rgba(16, 22, 40, .05),
       0 18px 40px -24px rgba(16, 22, 40, .38);
 
-    --btn-tint: rgba(12, 13, 17, .86);
-    --btn-solid: #0d0e12;
-    --btn-rim: rgba(255, 255, 255, .50);
-    --btn-rim-dark: rgba(0, 0, 0, .45);
-    --btn-chip: rgba(255, 255, 255, .16);
-    --btn-hl: rgba(255, 255, 255, .16);
-
     --grain: .030;
     --r-lg: 28px; --r-md: 22px; --r-sm: 16px;
     color-scheme: light;
@@ -103,13 +104,6 @@
         0 1px 2px rgba(0, 0, 0, .45),
         0 22px 48px -26px rgba(0, 0, 0, .8);
 
-      --btn-tint: rgba(238, 239, 244, .90);
-      --btn-solid: #eeeff4;
-      --btn-rim: rgba(255, 255, 255, .95);
-      --btn-rim-dark: rgba(0, 0, 0, .26);
-      --btn-chip: rgba(12, 13, 17, .10);
-      --btn-hl: rgba(255, 255, 255, .55);
-
       --grain: .05;
       color-scheme: dark;
     }
@@ -148,13 +142,6 @@
       inset 0 -14px 28px -18px rgba(0, 0, 0, .7),
       0 1px 2px rgba(0, 0, 0, .45),
       0 22px 48px -26px rgba(0, 0, 0, .8);
-
-    --btn-tint: rgba(238, 239, 244, .90);
-    --btn-solid: #eeeff4;
-    --btn-rim: rgba(255, 255, 255, .95);
-    --btn-rim-dark: rgba(0, 0, 0, .26);
-    --btn-chip: rgba(12, 13, 17, .10);
-    --btn-hl: rgba(255, 255, 255, .55);
 
     --grain: .05;
     color-scheme: dark;
@@ -253,11 +240,15 @@
       backdrop-filter: url("#foldyRefract") blur(1px);
     }
   }
+  /* Still glass: the same tint, sheen, rim and depth, without the backdrop blur.
+     For the large surfaces that only ever sit over the fixed ambient gradient, where
+     a 20px blur changes nothing you can see and the compositor still pays for every
+     pixel of a 600px card, four times over on a phone. */
+  .glass.still { -webkit-backdrop-filter: none; backdrop-filter: none; }
 
   /* No backdrop-filter at all: solid surfaces, same shapes, same contrast. */
   @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
     .glass { background-color: var(--glass-solid); }
-    .glass.button { background-color: var(--btn-solid); }
     .refract::before { display: none; }
   }
   @media (prefers-reduced-transparency: reduce) {
@@ -265,7 +256,6 @@
       background-color: var(--glass-solid); background-image: none;
       -webkit-backdrop-filter: none; backdrop-filter: none;
     }
-    .glass.button { background-color: var(--btn-solid); }
     .refract::before { display: none; }
     .tray { background: var(--glass-solid); }
     .ambient { background: var(--bg); }
@@ -302,9 +292,10 @@
   }
   .pill:hover { transform: translateY(-1px); }
 
-  /* Bend counter, top right */
+  /* Top right: the bend counter and the sound switch. Hidden on a phone, where a
+     fixed pill sits on top of the text and there is no scroll-bend sound to switch. */
+  .hud { position: fixed; top: 26px; right: 28px; z-index: 20; display: flex; align-items: center; gap: 8px; }
   .bend-counter {
-    position: fixed; top: 26px; right: 28px; z-index: 20;
     display: inline-flex; align-items: center; gap: 6px;
     height: 34px; padding: 0 14px; margin: 0;
     border-radius: 999px; color: var(--ink);
@@ -314,7 +305,19 @@
   }
   .bend-counter strong { font-weight: 600; }
   .bend-counter::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #5e8f6a; margin-right: 3px; }
-  @media (max-width: 900px) { .bend-counter { top: auto; bottom: 16px; right: 16px; } }
+  .sound {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%;
+    color: var(--ink); cursor: pointer; --glass-blur: 14px; --hl-size: 90px;
+    transition: transform .15s cubic-bezier(.2, 0, 0, 1);
+  }
+  .sound:hover { transform: translateY(-1px); }
+  .sound svg { position: relative; z-index: 1; width: 17px; height: 17px; }
+  .sound .off { display: none; }
+  .sound[aria-pressed="false"] { color: var(--muted); }
+  .sound[aria-pressed="false"] .on { display: none; }
+  .sound[aria-pressed="false"] .off { display: block; }
+  @media (max-width: 700px) { .hud { display: none; } }
 
   /* Intro */
   .intro { margin-bottom: 30px; }
@@ -327,29 +330,32 @@
   .actions { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 72px; }
   .purchase-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 
+  /* The one primary action on the page: accent-tinted glass, the same material the
+     pressed chip and the app's prominent buttons use, so "primary" means one colour
+     on the site and in Settings alike. */
   .button {
     display: inline-flex; align-items: center; gap: 10px;
     height: 46px; padding: 0 7px 0 20px; border-radius: 999px;
-    color: var(--bg); text-decoration: none;
+    color: var(--accent-ink); text-decoration: none;
     font-size: 15.5px; font-weight: 600; letter-spacing: -0.018em;
-    --glass-tint: var(--btn-tint);
-    --glass-solid: var(--btn-solid);
-    --glass-sheen: var(--btn-rim);
+    --glass-tint: var(--accent-deep);
+    --glass-solid: var(--accent-deep);
+    --glass-sheen: rgba(255, 255, 255, .30);
     --glass-sheen-2: rgba(0, 0, 0, .22);
-    --glass-rim: var(--btn-rim);
-    --glass-rim-dark: var(--btn-rim-dark);
-    --hl: var(--btn-hl);
+    --glass-rim: rgba(255, 255, 255, .55);
+    --glass-rim-dark: rgba(0, 0, 0, .34);
+    --hl: rgba(255, 255, 255, .22);
     --hl-size: 180px;
     --band: 14px;
     --glass-blur: 18px;
     transition: transform .15s cubic-bezier(.2, 0, 0, 1), box-shadow .2s cubic-bezier(.2, 0, 0, 1);
   }
-  .button:hover { transform: translateY(-1px); box-shadow: var(--glass-depth), 0 12px 26px -16px rgba(16, 22, 40, .5); }
+  .button:hover { transform: translateY(-1px); box-shadow: var(--glass-depth), 0 12px 26px -16px rgba(0, 70, 170, .55); }
   .button:active { transform: translateY(0) scale(.985); }
   .button .amount {
     position: relative; z-index: 1;
     display: inline-flex; align-items: center; height: 32px; padding: 0 12px;
-    border-radius: 999px; background: var(--btn-chip); font-size: 13px; font-weight: 500; letter-spacing: -0.005em;
+    border-radius: 999px; background: rgba(255, 255, 255, .18); font-size: 13px; font-weight: 500; letter-spacing: -0.005em;
   }
   .note { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; letter-spacing: -0.005em; max-width: 54ch; }
   .note a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line); }
@@ -410,14 +416,20 @@
   .card { border-radius: var(--r-lg); --band: 24px; }
   section.card { padding: 26px 26px 14px; }
   h2 {
-    font-size: 12.5px; font-weight: 600; letter-spacing: 0.085em; text-transform: uppercase;
-    color: var(--muted); margin: 0 0 10px;
+    font-size: 17px; font-weight: 600; letter-spacing: -0.018em;
+    color: var(--ink); margin: 0 0 8px;
   }
   dl { position: relative; z-index: 1; margin: 0 -26px; padding: 0; }
   .row { display: grid; grid-template-columns: 148px 1fr; gap: 18px; padding: 16px 26px; border-bottom: 1px solid var(--line); }
   .row:last-child { border-bottom: 0; }
   dt { margin: 0; font-weight: 600; letter-spacing: -0.015em; }
   dd { margin: 0; color: var(--muted); }
+  /* Three short facts read across, not down: a change of rhythm between two
+     cards that would otherwise be the same list twice. */
+  .card.compact dl { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .card.compact .row { display: block; padding: 14px 26px 18px; border-bottom: 0; border-right: 1px solid var(--line); }
+  .card.compact .row:last-child { border-right: 0; }
+  .card.compact dt { margin-bottom: 4px; }
 
   footer {
     position: relative;
@@ -520,8 +532,8 @@
   .rig .hinge { position: absolute; left: 2%; right: 2%; top: calc(100% - 4px); height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--bezel) 60%, var(--deck)); transform: translateZ(-2px); }
 
   @media (prefers-reduced-motion: reduce) {
-    .pill, .button, .chip, .fold-slider input::-webkit-slider-thumb { transition: none; }
-    .pill:hover, .button:hover, .chip:hover, .button:active, .chip:active { transform: none; }
+    .pill, .button, .chip, .sound, .fold-slider input::-webkit-slider-thumb { transition: none; }
+    .pill:hover, .button:hover, .chip:hover, .sound:hover, .button:active, .chip:active { transform: none; }
   }
 
   @media (max-width: 700px) {
@@ -531,6 +543,9 @@
     section.card { padding: 22px 20px 12px; }
     dl { margin: 0 -20px; }
     .row { padding: 14px 20px; }
+    .card.compact dl { grid-template-columns: 1fr; }
+    .card.compact .row { padding: 14px 20px; border-right: 0; border-bottom: 1px solid var(--line); }
+    .card.compact .row:last-child { border-bottom: 0; }
     footer { padding: 18px 20px; }
     .closer { width: calc(100vw - 32px); }
     .figure { width: calc(100vw - 32px); margin-bottom: 48px; }
@@ -560,8 +575,6 @@
 </svg>
 
 <main class="stage">
-  <p class="bend-counter glass" id="bendCounter" title="Full bends you have made on this page. Scroll back up and bend again."><strong id="bendTotal">0</strong>&nbsp;bends this visit</p>
-
   <div class="topbar">
     <div class="brand glass">
       <a class="wordmark" href="#">
@@ -581,7 +594,7 @@
   <div class="actions">
     <div class="purchase-row">
       <a class="button glass refract" href="https://github.com/alexey1312/foldy/releases/latest/download/Foldy.dmg">Download Foldy<span class="amount">Free</span></a>
-      <p class="note">The latest DMG. <a href="https://github.com/alexey1312/foldy/releases">All releases</a>, or build it yourself: <code>git clone</code>, then <code>make app</code>. One menu bar icon, no account, no license key.</p>
+      <p class="note"><span id="dlMeta">Version 0.1.6, a 2.3 MB DMG</span>, signed and notarized. <a href="https://github.com/alexey1312/foldy/releases">All releases</a>, or build it yourself: <code>git clone</code>, then <code>make app</code>. One menu bar icon, no account, no license key.</p>
     </div>
     <p class="note">Needs an Apple silicon MacBook with a lid angle sensor and macOS 14 or later. Every frame is drawn with Metal on your Mac and never leaves it.</p>
   </div>
@@ -643,12 +656,12 @@
   </section>
 
   <figure class="shot">
-    <img src="settings.png" width="900" height="728" alt="Foldy's Appearance settings: a live MacBook preview, a drag-to-open slider, Silk, Shade and Frost styles, and perspective, blur, shadow and bend controls." loading="lazy">
+    <img src="settings.png" width="940" height="820" alt="Foldy's Appearance settings: a live MacBook preview, a drag-to-open slider, Silk, Shade and Frost styles, and perspective, blur, shadow and bend controls." loading="lazy">
     <figcaption class="caption">Three styles. Perspective, blur, shadow and bend on sliders. Follow the lid, or drag the angle yourself.</figcaption>
   </figure>
 
   <div class="stack">
-    <section class="card glass refract">
+    <section class="card glass still">
       <h2>How it works</h2>
       <dl>
         <div class="row"><dt>Lid sensor</dt><dd>Reads the hinge angle from the Mac's own sensor over HID. It listens for reports and polls only while the lid is moving; no accessibility hacks.</dd></div>
@@ -660,7 +673,7 @@
       </dl>
     </section>
 
-    <section class="card glass refract">
+    <section class="card glass still compact">
       <h2>Requirements</h2>
       <dl>
         <div class="row"><dt>macOS</dt><dd>14 Sonoma or later.</dd></div>
@@ -669,7 +682,7 @@
       </dl>
     </section>
 
-    <section class="card glass refract">
+    <section class="card glass still">
       <h2>Private by design</h2>
       <dl>
         <div class="row"><dt>On device</dt><dd>Frames go from the capture straight to the GPU. Nothing is recorded, saved or uploaded; the app has no network code at all.</dd></div>
@@ -677,10 +690,19 @@
       </dl>
     </section>
 
-    <footer class="glass refract">
+    <footer class="glass still">
       <span>© <span id="year"></span> Foldy</span>
       <nav class="links"><a href="https://github.com/alexey1312/foldy">GitHub</a><a href="https://github.com/alexey1312/foldy/blob/main/README.md">Credits</a><a href="https://www.apple.com/iphone-duo/">iPhone Duo</a></nav>
     </footer>
+  </div>
+
+  <!-- Last in the document, so a screen reader meets the page before the scoreboard. -->
+  <div class="hud">
+    <p class="bend-counter glass" id="bendCounter" aria-live="polite"><strong id="bendTotal">0</strong>&nbsp;bends this visit</p>
+    <button class="sound glass" id="soundToggle" type="button" aria-pressed="true" aria-label="Click sound when the lid opens" title="Click sound">
+      <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.2L12 18.5v-13L7.2 9.5H4z"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.5 7.5 0 0 1 0 10.4"/></svg>
+      <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.2L12 18.5v-13L7.2 9.5H4z"/><path d="M16 9.5l4 5M20 9.5l-4 5"/></svg>
+    </button>
   </div>
 </main>
 
@@ -914,8 +936,21 @@
     try { audio = new (window.AudioContext || window.webkitAudioContext)(); audioReady = true; } catch (e) {}
   }
   ['pointerdown', 'keydown'].forEach(function (ev) { addEventListener(ev, armAudio, { passive: true }); });
+  // The switch, top right. Off is remembered; a page that clicks at you every visit
+  // after you asked it not to is worse than no click at all.
+  var soundToggle = document.getElementById('soundToggle');
+  var soundOn = true;
+  try { soundOn = localStorage.getItem('foldy-sound') !== 'off'; } catch (e) {}
+  soundToggle.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+  soundToggle.addEventListener('click', function () {
+    soundOn = !soundOn;
+    soundToggle.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+    try { localStorage.setItem('foldy-sound', soundOn ? 'on' : 'off'); } catch (e) {}
+    if (soundOn) { armAudio(); click(); }
+  });
   function click() {
-    if (!audioReady || document.hidden) return;
+    // No sound where the switch is not on screen to stop it (the phone layout).
+    if (!soundOn || !audioReady || document.hidden || soundToggle.offsetParent === null) return;
     if (audio.state === 'suspended') audio.resume();
     var rate = audio.sampleRate, frames = Math.round(rate * 0.085), buf = audio.createBuffer(1, frames, rate), d = buf.getChannelData(0), seed = 0x9E3779B9;
     for (var i = 0; i < frames; i++) {

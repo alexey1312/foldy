@@ -8,7 +8,7 @@ struct MenuBarView: View {
     var body: some View {
         Text(controller.statusLine)
         if let relaunchError = controller.relaunchError {
-            Text("Couldn't relaunch: \(relaunchError) — quit and open Foldy yourself.")
+            Text("Couldn't relaunch: \(relaunchError). Quit and open Foldy yourself.")
         }
         if controller.needsRelaunchForPermission {
             Button("Relaunch Foldy") { controller.relaunch() }

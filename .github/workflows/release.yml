@@ -216,10 +216,17 @@ jobs:
           cat "$WORK/appcast.xml"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # The site's download note names the version and size of the DMG the button
+          # fetches. It is stamped here, on main, in the same commit as the appcast.
+          SIZE="$(stat -f %z dist/Foldy.dmg | awk '{printf "%.1f MB", $1 / 1048576}')"
+          stamp_site() {
+            command cp -f "$WORK/appcast.xml" site/appcast.xml
+            sed -i '' -E "s|(<span id=\"dlMeta\">)[^<]*(</span>)|\\1Version $VERSION, a $SIZE DMG\\2|" site/index.html
+            git add site/appcast.xml site/index.html
+          }
           git checkout -- .   # drop the version stamp before leaving the tag
           git checkout -B main origin/main
-          command cp -f "$WORK/appcast.xml" site/appcast.xml
-          git add site/appcast.xml
+          stamp_site
           git commit -m "Appcast: Foldy $VERSION"
           # main may have moved since the fetch. The checkout is shallow, so rebuild the
           # commit on top of the new main rather than rebasing across history we do not
@@ -233,8 +240,7 @@ jobs:
             echo "push rejected, rebuilding the commit on the new main (attempt $attempt)"
             git fetch --depth 1 origin main
             git checkout -B main origin/main
-            command cp -f "$WORK/appcast.xml" site/appcast.xml
-            git add site/appcast.xml
+            stamp_site
             git commit -m "Appcast: Foldy $VERSION" || break   # already there: nothing to push
           done
           if [ "$pushed" != "true" ] && ! git diff --quiet HEAD origin/main -- site/appcast.xml; then

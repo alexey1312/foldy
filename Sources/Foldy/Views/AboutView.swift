@@ -17,12 +17,13 @@ struct AboutView: View {
         VStack(alignment: .leading, spacing: 24) {
             PaneHeader(title: "About", symbol: "info.circle.fill", tint: .gray)
 
-            HStack(spacing: 18) {
-                Image(systemName: "laptopcomputer")
-                    .font(.system(size: 34, weight: .medium))
-                    .foregroundStyle(.white)
-                    .frame(width: 76, height: 76)
-                    .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.black.gradient))
+            HStack(alignment: .top, spacing: 18) {
+                // The icon the Dock and Finder show, not a stand-in symbol.
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 84, height: 84)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Foldy")
                         .font(.system(size: 22, weight: .semibold))
@@ -30,9 +31,19 @@ struct AboutView: View {
                         .foregroundStyle(.secondary)
                     Text("Your desktop bends as you close the lid.")
                         .foregroundStyle(.secondary)
-                    Button("Welcome Tour…") { controller.showOnboarding(step: 0) }
-                        .glassButtonStyle()
-                        .padding(.top, 6)
+                    GlassGroup(spacing: 10) {
+                        HStack(spacing: 10) {
+                            Button("Welcome Tour…") { controller.showOnboarding(step: 0) }
+                                .glassButtonStyle()
+                            Link("Website", destination: Self.site)
+                                .glassButtonStyle()
+                            Link("Source", destination: Self.repository)
+                                .glassButtonStyle()
+                            Link("License", destination: Self.license)
+                                .glassButtonStyle()
+                        }
+                    }
+                    .padding(.top, 6)
                 }
             }
 
@@ -45,12 +56,40 @@ struct AboutView: View {
             }
 
             SettingsCard(title: "Credits") {
-                SettingsRow(title: "iPhone Duo", subtitle: "Apple's foldable, and the fold this borrows.") { EmptyView() }
+                SettingsRow(title: "iPhone Duo", subtitle: "Apple's foldable, and the fold this borrows.") {
+                    OpenLink(title: "iPhone Duo", destination: URL(string: "https://www.apple.com/iphone-duo/")!)
+                }
                 RowDivider()
-                SettingsRow(title: "Bendy", subtitle: "The app that first put the fold on a MacBook lid. Foldy is an open re-creation.") { EmptyView() }
+                SettingsRow(title: "Bendy", subtitle: "The app that first put the fold on a MacBook lid. Foldy is an open re-creation.") {
+                    OpenLink(title: "Bendy", destination: URL(string: "https://trybendy.app/")!)
+                }
                 RowDivider()
-                SettingsRow(title: "LidAngleSensor", subtitle: "Sam Henri Gold's work on the hinge sensor's HID report.") { EmptyView() }
+                SettingsRow(title: "LidAngleSensor", subtitle: "Sam Henri Gold's work on the hinge sensor's HID report.") {
+                    OpenLink(title: "LidAngleSensor", destination: URL(string: "https://github.com/samhenrigold/LidAngleSensor")!)
+                }
             }
         }
+    }
+
+    static let site = URL(string: "https://foldy.proteinunit.dev/")!
+    static let repository = URL(string: "https://github.com/alexey1312/foldy")!
+    static let license = URL(string: "https://github.com/alexey1312/foldy/blob/main/LICENSE")!
+}
+
+/// The arrow at the end of a credit row: opens `destination` in the browser.
+private struct OpenLink: View {
+    let title: String
+    let destination: URL
+
+    var body: some View {
+        Link(destination: destination) {
+            Image(systemName: "arrow.up.right")
+                .font(.system(size: 12, weight: .semibold))
+                .frame(width: 14, height: 14)
+        }
+        .glassButtonStyle()
+        .buttonBorderShape(.circle)
+        .help("Open \(title) in the browser")
+        .accessibilityLabel("Open \(title)")
     }
 }

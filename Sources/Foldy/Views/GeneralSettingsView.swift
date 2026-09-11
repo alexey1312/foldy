@@ -14,8 +14,10 @@ struct GeneralSettingsView: View {
             PaneHeader(title: "General", symbol: "gearshape.fill", tint: .gray)
 
             SettingsCard {
+                // Every switch carries its row's title as its label and hides it: the
+                // row already shows the text, and VoiceOver needs a name, not "switch".
                 SettingsRow(title: "Launch at login") {
-                    Toggle("", isOn: $launchAtLogin)
+                    Toggle("Launch at login", isOn: $launchAtLogin)
                         .labelsHidden()
                         .toggleStyle(.switch)
                         .onChange(of: launchAtLogin) { _, enabled in
@@ -38,15 +40,15 @@ struct GeneralSettingsView: View {
                 }
                 RowDivider()
                 SettingsRow(title: "Sound", subtitle: "A soft click when the lid opens and the desktop clears.") {
-                    Toggle("", isOn: $settings.soundEnabled).labelsHidden().toggleStyle(.switch)
+                    Toggle("Sound", isOn: $settings.soundEnabled).labelsHidden().toggleStyle(.switch)
                 }
                 RowDivider()
                 SettingsRow(title: "Show the lid angle in the menu bar") {
-                    Toggle("", isOn: $settings.showsAngleInMenuBar).labelsHidden().toggleStyle(.switch)
+                    Toggle("Show the lid angle in the menu bar", isOn: $settings.showsAngleInMenuBar).labelsHidden().toggleStyle(.switch)
                 }
                 RowDivider()
                 SettingsRow(title: "Fold the sample wallpaper", subtitle: "Instead of the live desktop. Handy for demos and for Macs without Screen Recording.") {
-                    Toggle("", isOn: $settings.sampleWallpaper).labelsHidden().toggleStyle(.switch)
+                    Toggle("Fold the sample wallpaper", isOn: $settings.sampleWallpaper).labelsHidden().toggleStyle(.switch)
                         .onChange(of: settings.sampleWallpaper) { _, _ in controller.evaluate() }
                 }
             }
@@ -100,7 +102,7 @@ struct GeneralSettingsView: View {
 
             SettingsCard(title: "Updates") {
                 SettingsRow(title: "Check for updates automatically", subtitle: updatesSubtitle) {
-                    Toggle("", isOn: Binding(
+                    Toggle("Check for updates automatically", isOn: Binding(
                         get: { controller.updater.automaticallyChecks },
                         set: { controller.updater.automaticallyChecks = $0 }
                     ))

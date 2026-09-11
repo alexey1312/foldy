@@ -105,7 +105,16 @@ grey — they are AppKit's and out of reach.
   welcome tour at step 2.
 - Never put `.tint(.clear)` on `.buttonStyle(.glass)`, whatever the migration guides
   say. On macOS the tint reaches the label too, so the title disappears in the window
-  that has focus. `.glassProminent` ignores a tint outright.
+  that has focus. `.glassProminent` ignores a tint outright, explicit `.tint(.accentColor)`
+  included, and draws white in the light appearance: the same as plain `.glass` beside
+  it. The accent-coloured primary is `ProminentGlassButtonStyle` in `LiquidGlass.swift`
+  (`glassEffect(.regular.tint(.accentColor).interactive())` on the label); use
+  `glassButtonStyle(.prominent)` and never reach for `.glassProminent` directly.
+- Every hidden-label `Toggle` carries its row title as the label: `Toggle("Sound", isOn:)`
+  plus `.labelsHidden()`. `Toggle("", isOn:)` reads to VoiceOver as a nameless switch.
+- Motion that is decoration checks `@Environment(\.accessibilityReduceMotion)`: the tour's
+  step slide and lid loop, the slider thumb, the chip text. The Metal preview following a
+  drag is feedback, not decoration, and stays.
 - `.navigationSplitViewColumnWidth` has to come after `.safeAreaInset` on the sidebar;
   the other way round the preference is swallowed and the column collapses.
 - The split view hands itself a sidebar toggle. With no toolbar to hold it, it lands
