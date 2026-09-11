@@ -38,7 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 /// Command-line switches for development. None of them are needed to use the app.
 ///
 ///   --settings [--pane general|appearance|about] [--window-height N]   open Settings at launch
-///   --screenshot-settings <png>      open Settings, capture the window, quit
+///   --screenshot-settings <png> [--scroll N]   open Settings, capture the window, quit
 ///   --screenshot-fold <png>          fold the sample wallpaper, capture the overlay, quit
 ///
 /// Capturing our own windows needs no Screen Recording permission, so this works on a
@@ -62,10 +62,17 @@ enum DevFlags {
             }
         }
         if let path = value(after: "--screenshot-settings") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+            let scroll = value(after: "--scroll").flatMap(Double.init) ?? 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                 let window = NSApp.windows.first { $0.isVisible && $0.styleMask.contains(.titled) }
-                capture(window, to: path)
-                NSApp.terminate(nil)
+                if scroll > 0, let scrollView = window?.contentView.flatMap(firstScrollView) {
+                    scrollView.contentView.scroll(to: NSPoint(x: 0, y: scroll))
+                    scrollView.reflectScrolledClipView(scrollView.contentView)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    capture(window, to: path)
+                    NSApp.terminate(nil)
+                }
             }
         }
         if let path = value(after: "--screenshot-fold") {
@@ -81,6 +88,14 @@ enum DevFlags {
                 NSApp.terminate(nil)
             }
         }
+    }
+
+    private static func firstScrollView(in view: NSView) -> NSScrollView? {
+        if let scrollView = view as? NSScrollView { return scrollView }
+        for child in view.subviews {
+            if let found = firstScrollView(in: child) { return found }
+        }
+        return nil
     }
 
     private static func capture(_ window: NSWindow?, to path: String) {
