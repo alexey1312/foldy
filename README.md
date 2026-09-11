@@ -219,7 +219,9 @@ site/appcast.xml        Sparkle feed, written by the release workflow.
 push to `main`. It ports the Metal shader to WebGL 2, so the MacBook at the top of
 the page bends as you scroll exactly the way the app bends the desktop, and the
 "Take a closer look" section swings a CSS 3D lid on its hinge with the fold on its
-screen. Open the file in a browser, or serve the folder.
+screen, with the lid control floating over it in glass — `backdrop-filter` standing
+in for the real thing, over the 3D scene it actually has something to blur. Open the
+file in a browser, or serve the folder.
 
 The custom domain is `site/CNAME` plus the same name in Settings › Pages. DNS
 lives at Cloudflare: `foldy` CNAME `alexey1312.github.io`, proxy **off** (grey
