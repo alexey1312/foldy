@@ -27,7 +27,12 @@
     --lid-back: #9a9aa0;
     --glow: rgba(0, 0, 0, .14);
     --track: rgba(17, 17, 17, .1);
-    --chip: rgba(17, 17, 17, .05);
+    /* Liquid Glass, as the app draws it on macOS 26: a translucent fill, a light rim
+       and a soft shadow, over whatever the element happens to sit on. */
+    --glass: rgba(255, 255, 255, .55);
+    --glass-rim: rgba(255, 255, 255, .75);
+    --glass-edge: rgba(17, 17, 17, .08);
+    --glass-shadow: rgba(0, 0, 0, .12);
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
@@ -44,7 +49,10 @@
       --lid-back: #55555b;
       --glow: rgba(0, 0, 0, .55);
       --track: rgba(255, 255, 255, .14);
-      --chip: rgba(255, 255, 255, .07);
+      --glass: rgba(120, 120, 130, .28);
+      --glass-rim: rgba(255, 255, 255, .22);
+      --glass-edge: rgba(255, 255, 255, .10);
+      --glass-shadow: rgba(0, 0, 0, .45);
       color-scheme: dark;
     }
   }
@@ -61,7 +69,10 @@
     --lid-back: #55555b;
     --glow: rgba(0, 0, 0, .55);
     --track: rgba(255, 255, 255, .14);
-    --chip: rgba(255, 255, 255, .07);
+    --glass: rgba(120, 120, 130, .28);
+    --glass-rim: rgba(255, 255, 255, .22);
+    --glass-edge: rgba(255, 255, 255, .10);
+    --glass-shadow: rgba(0, 0, 0, .45);
     color-scheme: dark;
   }
 
@@ -92,7 +103,10 @@
   .pill {
     display: inline-flex; align-items: center; gap: 6px;
     height: 28px; padding: 0 12px; margin-left: 4px;
-    border-radius: 999px; background: var(--card); color: var(--ink);
+    border: 1px solid var(--glass-edge); border-radius: 999px;
+    background: var(--glass); color: var(--ink);
+    -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: inset 0 1px 0 var(--glass-rim), 0 2px 8px var(--glass-shadow);
     text-decoration: none; font-size: 13px; letter-spacing: -0.01em;
     transition: transform .15s ease;
   }
@@ -104,7 +118,10 @@
     position: fixed; top: 28px; right: 32px; z-index: 20;
     display: inline-flex; align-items: center; gap: 6px;
     height: 28px; padding: 0 12px; margin: 0;
-    border-radius: 999px; background: var(--card); color: var(--ink);
+    border: 1px solid var(--glass-edge); border-radius: 999px;
+    background: var(--glass); color: var(--ink);
+    -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: inset 0 1px 0 var(--glass-rim), 0 2px 8px var(--glass-shadow);
     font-size: 13px; letter-spacing: -0.01em; pointer-events: none;
     font-variant-numeric: tabular-nums;
   }
@@ -188,6 +205,20 @@
   .state-card p b { font-weight: 600; }
   .state-card .hint { display: block; margin-top: 14px; color: var(--muted); font-size: 12.5px; }
 
+  /* The lid control floats over the MacBook in glass, the way the app's preview does.
+     Here backdrop-filter has the 3D scene behind it, so the blur is real. */
+  .scene-wrap { position: relative; }
+  .fold-bar {
+    position: absolute; left: 5%; right: 5%; bottom: 4%;
+    display: flex; align-items: center; gap: 14px; padding: 6px 20px;
+    border: 1px solid var(--glass-edge); border-radius: 999px; background: var(--glass);
+    -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+    box-shadow: inset 0 1px 0 var(--glass-rim), 0 8px 24px var(--glass-shadow);
+  }
+  .fold-bar .fold-slider { flex: 1; margin-top: 0; }
+  .fold-bar .angle-readout { margin-top: 0; color: var(--ink); font-weight: 600; }
+  @media (max-width: 520px) { .fold-bar { left: 3%; right: 3%; padding: 4px 14px; gap: 10px; } }
+
   .fold-slider { position: relative; margin-top: 10px; height: 44px; display: flex; align-items: center; }
   .fold-slider input {
     -webkit-appearance: none; appearance: none; width: 100%; height: 44px; margin: 0; background: transparent; cursor: pointer;
@@ -212,7 +243,10 @@
   .chips { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
   .chip {
     display: inline-flex; align-items: center; gap: 12px; height: 48px; padding: 0 22px 0 18px;
-    border: 0; border-radius: 999px; background: var(--card); color: var(--ink);
+    border: 1px solid var(--glass-edge); border-radius: 999px;
+    background: var(--glass); color: var(--ink);
+    -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: inset 0 1px 0 var(--glass-rim), 0 2px 10px var(--glass-shadow);
     font: inherit; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; cursor: pointer;
     transition: transform .15s ease, background .2s ease;
   }
@@ -309,11 +343,7 @@
       <div class="closer-copy">
         <div class="state-card">
           <p><b id="stateTitle">Foldable desktop.</b> <span id="stateBlurb">Offers the fluid fold of iPhone Duo in a Mac you already own. The base of the desktop stays put; the top folds away, blurs and falls into shadow.</span></p>
-          <span class="hint" id="dragHint">Drag below to open and close</span>
-          <div class="fold-slider">
-            <input type="range" id="lidRange" min="0" max="135" step="0.5" value="135" aria-label="Lid angle in degrees">
-          </div>
-          <div class="angle-readout"><span id="angleReadout">135°</span> · lid angle</div>
+          <span class="hint" id="dragHint">Drag the bar over the MacBook to open and close</span>
         </div>
         <div class="chips" id="chips" role="group" aria-label="Lid positions and styles">
           <button class="chip" type="button" data-chip="open"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Open</button>
@@ -324,28 +354,36 @@
           <button class="chip" type="button" data-chip="frost"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Frost</button>
         </div>
       </div>
-      <div class="scene" aria-hidden="true">
-        <div class="rig">
-          <div class="lid3d" id="lid3d">
-            <div class="face front">
-              <div class="panel" id="lidPanel">
-                <canvas id="lidCanvas"></canvas>
-                <div class="fallback" id="lidFallback"></div>
+      <div class="scene-wrap">
+        <div class="scene" aria-hidden="true">
+          <div class="rig">
+            <div class="lid3d" id="lid3d">
+              <div class="face front">
+                <div class="panel" id="lidPanel">
+                  <canvas id="lidCanvas"></canvas>
+                  <div class="fallback" id="lidFallback"></div>
+                </div>
+                <div class="notch3d"></div>
               </div>
-              <div class="notch3d"></div>
+              <div class="face back"></div>
             </div>
-            <div class="face back"></div>
+            <div class="hinge"></div>
+            <div class="deck3d"></div>
           </div>
-          <div class="hinge"></div>
-          <div class="deck3d"></div>
+        </div>
+        <div class="fold-bar">
+          <div class="fold-slider">
+            <input type="range" id="lidRange" min="0" max="135" step="0.5" value="135" aria-label="Lid angle in degrees">
+          </div>
+          <span class="angle-readout"><span id="angleReadout">135°</span></span>
         </div>
       </div>
     </div>
   </section>
 
   <figure class="shot">
-    <img src="settings.png" width="900" height="728" alt="Foldy's Appearance settings: a live MacBook preview, a drag-to-open slider, Silk, Shade and Frost styles, and perspective, blur, shadow and bend controls." loading="lazy">
-    <figcaption class="caption">Three styles. Perspective, blur, shadow and bend on sliders. Follow the lid, or drag the angle yourself.</figcaption>
+    <img src="settings.png" width="940" height="820" alt="Foldy's Appearance settings: a live MacBook preview with a Liquid Glass lid control floating over it, glass pills for Open, Halfway, Closed, Silk, Shade and Frost, and the three style thumbnails." loading="lazy">
+    <figcaption class="caption">The lid control floats over the preview in Liquid Glass. Three styles, with perspective, blur, shadow and bend on sliders.</figcaption>
   </figure>
 
   <div class="stack">
@@ -356,6 +394,7 @@
         <div class="row"><dt>Live desktop</dt><dd>Captures the screen with ScreenCaptureKit and renders the tilt with Metal, so windows and wallpaper move together. The overlay excludes itself from the capture.</dd></div>
         <div class="row"><dt>Three styles</dt><dd>Silk, Shade and Frost. Tune perspective, blur, shadow and bend, or set the angle where it clears.</dd></div>
         <div class="row"><dt>Bend</dt><dd>Not just a tilt: the sheet curls from the hinge, so the base stays put and only the upper part folds back, like a page. The demo above runs the same shader in WebGL.</dd></div>
+        <div class="row"><dt>Liquid Glass</dt><dd>On macOS 26 Tahoe the lid control floats over the preview in glass, and the pills and buttons are glass too. On Sonoma and Sequoia the same controls draw the way they always did.</dd></div>
         <div class="row"><dt>Sound</dt><dd>A soft click when the lid opens and the desktop clears. Synthesised on the spot; switch it off in General.</dd></div>
         <div class="row"><dt>Menu bar</dt><dd>Lives quietly in the menu bar. Pause with a click or Esc, or run the fold on demand with Try It Now.</dd></div>
       </dl>
@@ -364,7 +403,7 @@
     <section class="card">
       <h2>Requirements</h2>
       <dl>
-        <div class="row"><dt>macOS</dt><dd>14 Sonoma or later.</dd></div>
+        <div class="row"><dt>macOS</dt><dd>14 Sonoma or later. 26 Tahoe adds Liquid Glass to the settings and the welcome tour.</dd></div>
         <div class="row"><dt>Hardware</dt><dd>Apple silicon MacBook with a lid angle sensor. The 2019 16-inch MacBook Pro has one too.</dd></div>
         <div class="row"><dt>Permissions</dt><dd>Screen Recording, so the desktop can be captured. Without it Foldy folds a sample wallpaper instead.</dd></div>
       </dl>

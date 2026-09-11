@@ -31,6 +31,7 @@ struct AboutView: View {
                     Text("Your desktop bends as you close the lid.")
                         .foregroundStyle(.secondary)
                     Button("Welcome Tour…") { controller.showOnboarding(step: 0) }
+                        .glassButtonStyle()
                         .padding(.top, 6)
                 }
             }

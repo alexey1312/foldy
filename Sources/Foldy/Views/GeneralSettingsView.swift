@@ -59,6 +59,7 @@ struct GeneralSettingsView: View {
                 RowDivider()
                 SettingsRow(title: "Try it now", subtitle: "Runs the fold once on the real desktop, down and back up.") {
                     Button("Try It") { controller.sweep() }
+                        .glassButtonStyle()
                         .disabled(controller.isSweeping || controller.isPaused)
                 }
             }
@@ -73,13 +74,18 @@ struct GeneralSettingsView: View {
                     RowDivider()
                     SettingsRow(title: "Relaunch to start capturing", subtitle: "macOS hands a new Screen Recording permission to a fresh process only.") {
                         Button("Relaunch Foldy") { controller.relaunch() }
+                            .glassButtonStyle(.prominent)
                     }
                 } else if !controller.hasScreenPermission {
                     RowDivider()
                     SettingsRow(title: "Grant access", subtitle: "macOS asks once. If it already said no, allow Foldy in System Settings, then relaunch the app.") {
-                        HStack {
-                            Button("Request…") { controller.requestScreenPermission() }
-                            Button("System Settings…") { controller.openScreenRecordingSettings() }
+                        GlassGroup(spacing: 10) {
+                            HStack(spacing: 10) {
+                                Button("Request…") { controller.requestScreenPermission() }
+                                    .glassButtonStyle(.prominent)
+                                Button("System Settings…") { controller.openScreenRecordingSettings() }
+                                    .glassButtonStyle()
+                            }
                         }
                     }
                 }
@@ -104,6 +110,7 @@ struct GeneralSettingsView: View {
                 RowDivider()
                 SettingsRow(title: "Version \(appVersion)", subtitle: controller.updater.isAvailable ? "Updates come from GitHub Releases, signed with Sparkle's EdDSA key." : "Updates are available in the packaged app only.") {
                     Button("Check Now") { controller.updater.checkForUpdates() }
+                        .glassButtonStyle()
                         .disabled(!controller.updater.isAvailable)
                 }
             }

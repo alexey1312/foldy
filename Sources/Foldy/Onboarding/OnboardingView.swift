@@ -10,6 +10,7 @@ struct OnboardingView: View {
     let onFinish: () -> Void
     @State private var step: Step
     @State private var direction: Edge = .trailing
+    @Namespace private var footerGlass
 
     init(controller: AppController, initialStep: Int, onFinish: @escaping () -> Void) {
         self.controller = controller
@@ -64,19 +65,29 @@ struct OnboardingView: View {
                 }
             }
             Spacer()
-            if step != .welcome {
-                Button("Back") { go(-1) }
-                    .keyboardShortcut(.leftArrow, modifiers: [])
-            }
-            if step == .done {
-                Button("Finish") { finish() }
-                    .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.borderedProminent)
-            } else {
-                Button(continueTitle) { go(1) }
-                    .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(step == .capture && controller.needsRelaunchForPermission)
+            GlassGroup(spacing: 14) {
+                HStack(spacing: 14) {
+                    // Back is absent on the first step; the ids let its glass flow out
+                    // of the button beside it rather than fade in on its own.
+                    if step != .welcome {
+                        Button("Back") { go(-1) }
+                            .keyboardShortcut(.leftArrow, modifiers: [])
+                            .glassButtonStyle()
+                            .glassMorphID("back", in: footerGlass)
+                    }
+                    if step == .done {
+                        Button("Finish") { finish() }
+                            .keyboardShortcut(.defaultAction)
+                            .glassButtonStyle(.prominent)
+                            .glassMorphID("forward", in: footerGlass)
+                    } else {
+                        Button(continueTitle) { go(1) }
+                            .keyboardShortcut(.defaultAction)
+                            .glassButtonStyle(.prominent)
+                            .glassMorphID("forward", in: footerGlass)
+                            .disabled(step == .capture && controller.needsRelaunchForPermission)
+                    }
+                }
             }
         }
         .controlSize(.large)
@@ -148,7 +159,7 @@ private struct StatusPill: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
-        .background(Capsule().fill(.quaternary.opacity(0.5)))
+        .glassBackground(in: Capsule())
     }
 }
 
@@ -296,23 +307,26 @@ private struct CaptureStep: View {
                     } label: {
                         Label("Relaunch Foldy", systemImage: "arrow.clockwise")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .glassButtonStyle(.prominent)
                     .controlSize(.large)
                 } else if controller.hasScreenPermission {
                     StatusPill(kind: .good, text: "Screen Recording allowed")
                     Text("The live desktop is what will fold.").foregroundStyle(.secondary)
                 } else {
                     StatusPill(kind: .bad, text: "Screen Recording not allowed")
-                    HStack(spacing: 12) {
-                        Button {
-                            controller.requestScreenPermission()
-                        } label: {
-                            Label("Allow Screen Recording", systemImage: "rectangle.dashed.badge.record")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-                        Button("Open System Settings…") { controller.openScreenRecordingSettings() }
+                    GlassGroup(spacing: 12) {
+                        HStack(spacing: 12) {
+                            Button {
+                                controller.requestScreenPermission()
+                            } label: {
+                                Label("Allow Screen Recording", systemImage: "rectangle.dashed.badge.record")
+                            }
+                            .glassButtonStyle(.prominent)
                             .controlSize(.large)
+                            Button("Open System Settings…") { controller.openScreenRecordingSettings() }
+                                .glassButtonStyle()
+                                .controlSize(.large)
+                        }
                     }
                     Text("macOS shows its own dialog once. If it has already been dismissed, switch Foldy on under Privacy & Security › Screen Recording. This page notices as soon as it is allowed.")
                         .foregroundStyle(.secondary)
@@ -348,7 +362,7 @@ private struct StyleStep: View {
                 } label: {
                     Label(controller.isSweeping ? "Folding…" : "Try It Now", systemImage: "play.fill")
                 }
-                .buttonStyle(.borderedProminent)
+                .glassButtonStyle(.prominent)
                 .controlSize(.large)
                 .disabled(controller.isSweeping)
                 Text(controller.usesSampleWallpaper
@@ -381,7 +395,7 @@ private struct DoneStep: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(Capsule().fill(.quaternary.opacity(0.5)))
+                .glassBackground(in: Capsule())
                 Text("the menu bar icon").font(.system(size: 13)).foregroundStyle(.secondary)
             }
             SettingsCard {

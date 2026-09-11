@@ -22,8 +22,8 @@ struct MenuBarView: View {
         }
         .disabled(controller.isSweeping || controller.isPaused)
         Divider()
-        SettingsLink {
-            Text("Settings…")
+        Button("Settings…") {
+            controller.openSettings()
         }
         .keyboardShortcut(",")
         if controller.updater.isAvailable {

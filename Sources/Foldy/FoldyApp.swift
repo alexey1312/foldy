@@ -12,11 +12,6 @@ struct FoldyApp: App {
             MenuBarLabel(controller: AppController.shared)
         }
         .menuBarExtraStyle(.menu)
-
-        Settings {
-            SettingsView(controller: AppController.shared)
-        }
-        .windowResizability(.contentSize)
     }
 }
 
@@ -35,6 +30,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 
+extension View {
+    /// Pins SwiftUI's control state to "key" for a screenshot run.
+    ///
+    /// A process started from a shell that is not itself frontmost cannot bring the app
+    /// to the front, so the captured window is always inactive — and an inactive window
+    /// draws glass, switches and buttons dimmed. The doc images should show what a user
+    /// sees, not what a background window looks like.
+    @ViewBuilder
+    func screenshotControlState() -> some View {
+        if DevFlags.isScreenshotRun {
+            environment(\.controlActiveState, .key)
+        } else {
+            self
+        }
+    }
+}
+
 /// Command-line switches for development. None of them are needed to use the app.
 ///
 ///   --settings [--pane general|appearance|about] [--window-height N]   open Settings at launch
@@ -42,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 ///   --screenshot-fold <png>          fold the sample wallpaper, capture the overlay, quit
 ///   --onboarding                     open the welcome tour at launch
 ///   --screenshot-onboarding <png> [--step N]   open the tour at a step, capture, quit
+///   --appearance dark|light          override the system appearance, for the doc images
 ///
 /// Capturing our own windows needs no Screen Recording permission, so this works on a
 /// fresh machine and on a Mac without a lid.
@@ -58,14 +71,17 @@ enum DevFlags {
             guard let index = args.firstIndex(of: flag), index + 1 < args.count else { return nil }
             return args[index + 1]
         }
+        // The committed images are dark; this Mac need not be.
+        switch value(after: "--appearance") {
+        case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
+        case "light": NSApp.appearance = NSAppearance(named: .aqua)
+        default: break
+        }
         if args.contains("--settings") || value(after: "--screenshot-settings") != nil {
-            // SwiftUI wires the Settings scene into the responder chain just after launch.
-            // The SwiftUI Settings scene claims the selector but shows nothing when the
-            // process is started from a shell, so host the same view in a plain window.
             let pane = value(after: "--pane").flatMap(SettingsView.Pane.init(rawValue:)) ?? .appearance
             let height = value(after: "--window-height").flatMap(Double.init)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                AppController.shared.openSettings(hosted: true, pane: pane, height: height)
+                AppController.shared.openSettings(pane: pane, height: height)
             }
         }
         if let path = value(after: "--screenshot-settings") {

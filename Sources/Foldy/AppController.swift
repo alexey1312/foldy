@@ -267,24 +267,25 @@ final class AppController {
 
     @ObservationIgnored private var settingsWindow: NSWindow?
 
-    /// Opens Settings from AppKit code. The menu uses `SettingsLink`; this is for the
-    /// command-line switches, where the SwiftUI scene may not answer, so it falls back
-    /// to hosting the same view in a window of its own.
-    func openSettings(hosted: Bool = false, pane: SettingsView.Pane = .appearance, height: Double? = nil) {
+    /// Foldy's own Settings window, rather than SwiftUI's `Settings` scene.
+    ///
+    /// The scene came with chrome we could not reach: an empty toolbar band and the
+    /// split view's automatic sidebar toggle, which landed in the middle of the sidebar
+    /// instead of beside the traffic lights. It also never opened for a process started
+    /// from a shell, so the `--screenshot-settings` switch saw a different window from
+    /// the one users get. One window, made here, fixes both.
+    func openSettings(pane: SettingsView.Pane = .appearance, height: Double? = nil) {
         NSApp.activate()
-        if !hosted {
-            for name in ["showSettingsWindow:", "showPreferencesWindow:"] where NSApp.sendAction(Selector(name), to: nil, from: nil) {
-                return
-            }
-        }
         if let settingsWindow {
             settingsWindow.makeKeyAndOrderFront(nil)
             return
         }
-        let host = NSHostingController(rootView: SettingsView(controller: self, initialPane: pane))
+        let host = NSHostingController(rootView: SettingsView(controller: self, initialPane: pane).screenshotControlState())
         let window = NSWindow(contentViewController: host)
         window.title = "Foldy Settings"
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+        // No toolbar: the titlebar is a bare drag strip with the window title, and the
+        // sidebar's material runs up behind the traffic lights.
         window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false
         if let height {

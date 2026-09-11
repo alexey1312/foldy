@@ -11,7 +11,7 @@ Foldy is an open, from-scratch re-creation of [Bendy](https://trybendy.app/):
 a menu bar app for macOS, written in Swift with SwiftUI, Metal, ScreenCaptureKit
 and IOKit. No account, no license key, no network code.
 
-| The fold on the real display | Settings, with the drag-to-open preview |
+| The fold on the real display | Settings, with the lid control in glass over the preview |
 | --- | --- |
 | ![The desktop folded over the lid](docs/fold-overlay.png) | ![Appearance settings](docs/settings-appearance.png) |
 
@@ -32,9 +32,15 @@ and IOKit. No account, no license key, no network code.
   Shadow, Bend and Frost on sliders. Set the angle where the desktop clears and
   the angle where the fold completes.
 - **Take a closer look.** Settings shows a 3D MacBook, rendered by the same
-  Metal code as the overlay, whose lid you open and close with a drag — the
-  interaction from Apple's iPhone Duo page, with Open / Halfway / Closed /
-  Silk / Shade / Frost chips.
+  Metal code as the overlay, on a lit stage with the lid control floating over it
+  — the interaction from Apple's iPhone Duo page, with Open / Halfway / Closed /
+  Silk / Shade / Frost pills below.
+- **Liquid Glass.** On macOS 26 Tahoe the floating lid control, the state pills and
+  every button in Settings and the welcome tour are drawn in Liquid Glass, grouped
+  into `GlassEffectContainer`s so neighbours share one backdrop and morph into each
+  other. The content — the settings cards, the style thumbnails, the text — stays
+  flat, which is where Apple draws the line. On Sonoma and Sequoia the same controls
+  fall back to the bordered buttons and pills Foldy has always used.
 - **Sound.** A synthesised click when the lid opens and the desktop clears.
 - **Menu bar.** Lives in the menu bar. Pause, Try It Now (folds the real desktop
   once, down and back up), Settings, Quit. Click the fold or press Esc to clear
@@ -45,7 +51,7 @@ and IOKit. No account, no license key, no network code.
 
 ## Requirements
 
-- macOS 14 Sonoma or later.
+- macOS 14 Sonoma or later; macOS 26 Tahoe adds Liquid Glass.
 - An Apple silicon MacBook with a lid angle sensor (MacBook Pro 2021 onward,
   MacBook Air M2 onward, or the 2019 16-inch MacBook Pro).
 - Screen Recording permission, so the desktop can be captured. Without it Foldy
@@ -72,6 +78,8 @@ offers a relaunch and continues where it left off), lets you pick a style and tr
 the fold on the real display. Until Screen Recording is allowed Foldy folds a
 sample wallpaper instead of the live desktop. The tour is always a click away:
 menu bar › Welcome Tour….
+
+![The welcome tour asking for Screen Recording](docs/onboarding-capture.png)
 
 Releases are cut by `.github/workflows/release.yml` from a `v*` tag; CI on every
 push builds the package, runs the tests and bundles the app.
@@ -131,6 +139,7 @@ Other targets:
 ```bash
 make test         # unit tests for the angle curve, the HID report parser, the styles
 make snapshot     # renders the fold and the MacBook preview to docs/snapshots/*.png
+make shots        # regenerates the window images in docs/ and site/settings.png
 swift build       # debug build of every target
 ```
 
@@ -152,8 +161,12 @@ Useful while developing; none are needed to use the app.
 | `--screenshot-fold out.png` | Folds the sample wallpaper on the real display, captures the overlay, quits |
 | `--onboarding` | Opens the welcome tour at launch |
 | `--screenshot-onboarding out.png [--step 0-4]` | Opens the tour at a step, captures the window, quits |
+| `--appearance dark\|light` | Overrides the system appearance, so the doc images are dark on any Mac |
 
-Screenshot runs keep Sparkle dormant and never touch the persisted settings.
+Screenshot runs keep Sparkle dormant and never touch the persisted settings. They
+also pin SwiftUI's control state to *key*: a process launched from a shell cannot
+bring itself to the front, and an inactive window draws glass, switches and buttons
+dimmed, which is not what the images should show.
 
 `foldy-snapshot` renders without a window:
 
@@ -185,6 +198,7 @@ Sources/Foldy           The menu bar app.
   Updater.swift           Sparkle, dormant outside a bundle and in screenshot runs.
   Onboarding/             The welcome tour: five steps, resumes after a relaunch.
   Views/                  Settings panes, the drag-to-open slider, the Metal preview views.
+    LiquidGlass.swift     Glass on macOS 26, the older controls below it, chosen in one place.
 Sources/FoldySnapshot   Renders PNGs of the fold and the preview.
 Tests/FoldyCoreTests    Swift Testing suites.
 Support/Info.plist      The app bundle's plist: LSUIElement, bundle id, Sparkle feed and key.
@@ -213,6 +227,10 @@ Built and checked on a Mac mini (M4 Pro, macOS 26.6, Xcode 27 beta) and on the
 GitHub `macos-15` runner:
 
 - `swift build`, `swift test` (12 tests) and `make app` pass on both.
+- Liquid Glass was checked against the macOS 27 SDK on macOS 26.6: the glass pills,
+  the floating lid control and the glass buttons render in both appearances, and the
+  `#available(macOS 26, *)` fallbacks still compile against the macOS 14 floor. The
+  glass paths have not been run on Sonoma or Sequoia, where the fallbacks take over.
 - The renderer, the 3D preview, the settings window, the welcome tour and the
   full-screen overlay were exercised with the sample wallpaper: `--screenshot-fold`
   runs *Try It Now* on the real display and captures the result
