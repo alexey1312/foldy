@@ -41,10 +41,18 @@ struct MacBookPreviewView: NSViewRepresentable {
         let scene: MacBookScene?
 
         init(graphics: FoldGraphics) {
-            scene = try? MacBookScene(graphics: graphics)
-            if let scene, let image = WallpaperArt.image() {
-                try? scene.fold.setSource(cgImage: image)
+            // A blank preview pane with nothing in Console is a support question nobody
+            // can answer; these are the only places the Settings previews can fail.
+            do {
+                let scene = try MacBookScene(graphics: graphics)
+                if let image = WallpaperArt.image() {
+                    try scene.fold.setSource(cgImage: image)
+                }
                 scene.lidAngleJump(to: FoldCurve.fullyOpenAngle)
+                self.scene = scene
+            } catch {
+                scene = nil
+                FoldyLog.graphics.error("settings preview unavailable: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -94,11 +102,17 @@ struct FoldThumbnailView: NSViewRepresentable {
         let renderer: FoldRenderer?
 
         init(graphics: FoldGraphics) {
-            renderer = try? FoldRenderer(graphics: graphics)
-            renderer?.smoothing = 1
-            renderer?.targetProgress = 0.8
-            if let renderer, let image = WallpaperArt.image(width: 640, height: 416) {
-                try? renderer.setSource(cgImage: image)
+            do {
+                let renderer = try FoldRenderer(graphics: graphics)
+                renderer.smoothing = 1
+                renderer.targetProgress = 0.8
+                if let image = WallpaperArt.image(width: 640, height: 416) {
+                    try renderer.setSource(cgImage: image)
+                }
+                self.renderer = renderer
+            } catch {
+                renderer = nil
+                FoldyLog.graphics.error("style thumbnail unavailable: \(error.localizedDescription, privacy: .public)")
             }
         }
     }

@@ -7,21 +7,8 @@ import ServiceManagement
 @MainActor
 @Observable
 final class SettingsStore {
-    private struct Snapshot: Codable {
-        var style: FoldStyle = .silk
-        var styleParameters: [String: FoldParameters] = [:]
-        var curve: FoldCurve = .default
-        var soundEnabled = true
-        var previewFollowsLid = true
-        var previewAngle: Double = FoldCurve.fullyOpenAngle
-        var sampleWallpaper = false
-        var showsAngleInMenuBar = false
-        var onboardingCompleted = false
-        var onboardingStep = 0
-    }
-
     private static let key = "app.foldy.settings"
-    private var loading = true
+    @ObservationIgnored private var loading = true
     @ObservationIgnored private var pendingSave: DispatchWorkItem?
 
     var style: FoldStyle { didSet { save() } }
@@ -39,10 +26,13 @@ final class SettingsStore {
     var onboardingStep: Int { didSet { save() } }
 
     init() {
-        var snapshot = Snapshot()
-        if let data = UserDefaults.standard.data(forKey: Self.key),
-           let stored = try? JSONDecoder().decode(Snapshot.self, from: data) {
-            snapshot = stored
+        var snapshot = SettingsSnapshot()
+        if let data = UserDefaults.standard.data(forKey: Self.key) {
+            do {
+                snapshot = try JSONDecoder().decode(SettingsSnapshot.self, from: data)
+            } catch {
+                FoldyLog.app.error("settings would not decode, starting fresh: \(error.localizedDescription, privacy: .public)")
+            }
         }
         style = snapshot.style
         styleParameters = snapshot.styleParameters
@@ -103,14 +93,29 @@ final class SettingsStore {
 
     private func writeNow() {
         pendingSave = nil
-        let snapshot = Snapshot(
-            style: style, styleParameters: styleParameters, curve: curve, soundEnabled: soundEnabled,
-            previewFollowsLid: previewFollowsLid, previewAngle: previewAngle,
-            sampleWallpaper: sampleWallpaper, showsAngleInMenuBar: showsAngleInMenuBar,
-            onboardingCompleted: onboardingCompleted, onboardingStep: onboardingStep
-        )
-        if let data = try? JSONEncoder().encode(snapshot) {
-            UserDefaults.standard.set(data, forKey: Self.key)
+        var snapshot = SettingsSnapshot()
+        snapshot.style = style
+        snapshot.styleParameters = styleParameters
+        snapshot.curve = curve
+        snapshot.soundEnabled = soundEnabled
+        snapshot.previewFollowsLid = previewFollowsLid
+        snapshot.previewAngle = previewAngle
+        snapshot.sampleWallpaper = sampleWallpaper
+        snapshot.showsAngleInMenuBar = showsAngleInMenuBar
+        snapshot.onboardingCompleted = onboardingCompleted
+        snapshot.onboardingStep = onboardingStep
+        do {
+            UserDefaults.standard.set(try JSONEncoder().encode(snapshot), forKey: Self.key)
+        } catch {
+            FoldyLog.app.error("settings would not save: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    /// Writes a coalesced change out now. Called on the way out, so a setting changed in
+    /// the last quarter second before Quit is not lost.
+    func flush() {
+        guard pendingSave != nil else { return }
+        pendingSave?.cancel()
+        writeNow()
     }
 }

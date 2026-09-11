@@ -36,7 +36,13 @@ func parse() -> Options {
     while let arg = args.next() {
         switch arg {
         case "--out": options.out = value(arg)
-        case "--scene": options.scene = value(arg)
+        case "--scene":
+            let name = value(arg).lowercased()
+            guard ["fold", "macbook"].contains(name) else {
+                FileHandle.standardError.write("unknown scene \(name); use fold or macbook\n".data(using: .utf8)!)
+                exit(2)
+            }
+            options.scene = name
         case "--style":
             let name = value(arg)
             guard let style = FoldStyle(rawValue: name.lowercased()) else {
@@ -75,7 +81,11 @@ if let path = options.source {
     }
     sourceImage = image
 } else {
-    sourceImage = WallpaperArt.image()!
+    guard let wallpaper = WallpaperArt.image() else {
+        FileHandle.standardError.write("could not draw the sample wallpaper\n".data(using: .utf8)!)
+        exit(1)
+    }
+    sourceImage = wallpaper
 }
 
 let clear: MTLClearColor = switch options.background {

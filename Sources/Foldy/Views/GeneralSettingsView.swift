@@ -104,6 +104,7 @@ struct GeneralSettingsView: View {
                         get: { controller.updater.automaticallyChecks },
                         set: { controller.updater.automaticallyChecks = $0 }
                     ))
+                    .help(controller.updater.canCheck ? "Foldy checks the Sparkle feed in the background." : "")
                     .labelsHidden().toggleStyle(.switch)
                     .disabled(!controller.updater.isAvailable)
                 }

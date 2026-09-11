@@ -25,7 +25,7 @@ public final class MacBookScene: @unchecked Sendable {
     public var targetLidAngle: Double = FoldCurve.fullyOpenAngle
     /// Hinge angle now, after smoothing.
     public private(set) var lidAngle: Double = FoldCurve.fullyOpenAngle
-    /// Per-frame lerp factor for the lid. 1 disables smoothing.
+    /// Lerp factor for the lid per 1/60 s. 1 disables smoothing.
     public var smoothing: Double = 0.14
     public var curve: FoldCurve = .default
     /// Background behind the MacBook. Set to the window colour so it blends in.

@@ -47,9 +47,15 @@ struct OnboardingView: View {
         }
         .frame(width: Self.width, height: Self.height)
         .background(.background)
-        .onChange(of: step) { _, new in settings.onboardingStep = new.rawValue }
+        // A screenshot run opens the tour at a given step and quits; persisting that
+        // would leave the developer's own tour parked wherever `make shots` left it.
+        .onChange(of: step) { _, new in
+            guard !DevFlags.isScreenshotRun else { return }
+            settings.onboardingStep = new.rawValue
+        }
         .onAppear {
             controller.refreshPermission()
+            guard !DevFlags.isScreenshotRun else { return }
             settings.onboardingStep = step.rawValue
         }
     }
@@ -364,7 +370,7 @@ private struct StyleStep: View {
                 }
                 .glassButtonStyle(.prominent)
                 .controlSize(.large)
-                .disabled(controller.isSweeping)
+                .disabled(controller.isSweeping || controller.isPaused)
                 Text(controller.usesSampleWallpaper
                      ? "Screen Recording is not active in this process, so this shows the sample wallpaper."
                      : "Watch the whole screen.")

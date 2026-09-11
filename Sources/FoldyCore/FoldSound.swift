@@ -22,6 +22,17 @@ public final class FoldSound: @unchecked Sendable {
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
         player.volume = 0.5
+        // The first start() negotiates with the audio HAL and costs tens of milliseconds.
+        // click() is called from evaluate(), on the main thread, on the last frames of the
+        // fold — the worst possible place for that. Pay it at launch, off the main thread.
+        DispatchQueue.global(qos: .utility).async { [engine, lock] in
+            lock.lock()
+            defer { lock.unlock() }
+            engine.prepare()
+            do { try engine.start() } catch {
+                FoldyLog.app.error("audio engine would not start: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 
     public func click() {
@@ -31,6 +42,7 @@ public final class FoldSound: @unchecked Sendable {
         do {
             if !engine.isRunning { try engine.start() }
         } catch {
+            FoldyLog.app.error("audio engine would not start: \(error.localizedDescription, privacy: .public)")
             return
         }
         player.scheduleBuffer(buffer, at: nil, options: .interrupts)

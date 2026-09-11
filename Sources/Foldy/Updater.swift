@@ -11,30 +11,35 @@ import Sparkle
 @Observable
 final class Updater {
     private let controller: SPUStandardUpdaterController?
+    /// Whether this copy of Foldy can update itself — a property of the bundle alone, so
+    /// a screenshot run photographs the card users actually see, with only the network
+    /// side of Sparkle held back.
     let isAvailable: Bool
     private(set) var canCheck = false
+    private(set) var lastCheck: Date?
+
+    /// Mirrored rather than read through: `@Observable` tracks stored properties, so a
+    /// computed passthrough to Sparkle left the switch in Settings unable to redraw
+    /// itself — it stayed where it was until something else invalidated the view.
+    var automaticallyChecks: Bool {
+        didSet { controller?.updater.automaticallyChecksForUpdates = automaticallyChecks }
+    }
 
     init(enabled: Bool) {
         let bundle = Bundle.main
-        let configured = enabled
-            && bundle.object(forInfoDictionaryKey: "SUFeedURL") != nil
+        isAvailable = bundle.object(forInfoDictionaryKey: "SUFeedURL") != nil
             && bundle.object(forInfoDictionaryKey: "SUPublicEDKey") != nil
-        isAvailable = configured
-        controller = configured ? SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil) : nil
+        controller = isAvailable && enabled
+            ? SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+            : nil
+        automaticallyChecks = controller?.updater.automaticallyChecksForUpdates ?? true
         canCheck = controller?.updater.canCheckForUpdates ?? false
-    }
-
-    var automaticallyChecks: Bool {
-        get { controller?.updater.automaticallyChecksForUpdates ?? false }
-        set { controller?.updater.automaticallyChecksForUpdates = newValue }
-    }
-
-    var lastCheck: Date? {
-        controller?.updater.lastUpdateCheckDate
+        lastCheck = controller?.updater.lastUpdateCheckDate
     }
 
     func checkForUpdates() {
         controller?.checkForUpdates(nil)
         canCheck = controller?.updater.canCheckForUpdates ?? false
+        lastCheck = controller?.updater.lastUpdateCheckDate
     }
 }
