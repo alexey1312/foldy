@@ -162,7 +162,7 @@ jobs:
           echo "$SPARKLE_PRIVATE_KEY" | "$RUNNER_TEMP/sparkle/bin/generate_appcast" \
             --ed-key-file - \
             --download-url-prefix "https://github.com/alexey1312/foldy/releases/download/$GITHUB_REF_NAME/" \
-            --link "https://alexey1312.github.io/foldy/" \
+            --link "https://foldy.proteinunit.dev/" \
             --maximum-versions 6 \
             "$WORK"
           cat "$WORK/appcast.xml"

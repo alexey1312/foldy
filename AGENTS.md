@@ -70,6 +70,9 @@ build/Foldy.app/Contents/MacOS/Foldy --screenshot-fold out.png      # real overl
   staples; with `SPARKLE_PRIVATE_KEY` it also signs the zip, rewrites
   `site/appcast.xml` on `main` and triggers the Pages deploy (a GITHUB_TOKEN push
   starts no workflow by itself, hence `gh workflow run pages.yml`).
+- The site and the Sparkle feed live on `https://foldy.proteinunit.dev/`
+  (`site/CNAME` + Settings › Pages, Cloudflare DNS-only CNAME). `SUFeedURL`,
+  the `--link` in `release.yml` and `site/CNAME` must name the same host.
 - To re-run a failed tag after a fix, move the tag: `git tag -d v && git push
   origin :refs/tags/v && git tag -a v && git push origin v`.
 - Secrets are listed in README › Signing. Never print, commit or move them; the
