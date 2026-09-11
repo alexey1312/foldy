@@ -13,66 +13,150 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
 <style>
+  /* ===========================================================================
+     Tokens. Two schemes, one material. Liquid Glass in dark mode is smoked
+     glass, not the light sheet turned down: the tint goes dark, the specular
+     rim stays bright but thin, and the opposite rim goes to near-black.
+     =========================================================================== */
   :root {
-    --bg: #f5f5f5;
+    --bg: #ecedf2;
     --card: #ffffff;
-    --ink: #111111;
-    --muted: #6f6f6f;
-    --line: #efefef;
+    --ink: #0d0e12;
+    --muted: #5d6270;
+    --line: rgba(14, 18, 32, .085);
     --accent: #0a84ff;
+    --accent-deep: #0062d6;   /* the fill that has to carry white text at AA */
     --accent-ink: #ffffff;
     --bezel: #121212;
     --deck: #858585;
     --deck-lip: rgba(0, 0, 0, .35);
     --lid-back: #9a9aa0;
-    --glow: rgba(0, 0, 0, .14);
+    --glow: rgba(24, 32, 56, .18);
     --track: rgba(17, 17, 17, .1);
-    /* Liquid Glass, as the app draws it on macOS 26: a translucent fill, a light rim
-       and a soft shadow, over whatever the element happens to sit on. */
-    --glass: rgba(255, 255, 255, .55);
-    --glass-rim: rgba(255, 255, 255, .75);
-    --glass-edge: rgba(17, 17, 17, .08);
-    --glass-shadow: rgba(0, 0, 0, .12);
+    --chip: rgba(17, 17, 17, .05);
+
+    /* Ambient scene. Something for the glass to actually refract. */
+    --amb-1: rgba(104, 152, 255, .34);
+    --amb-2: rgba(255, 186, 150, .26);
+    --amb-3: rgba(132, 216, 209, .28);
+    --amb-4: rgba(255, 172, 190, .18);
+
+    /* The material */
+    --glass-tint: rgba(255, 255, 255, .50);
+    --glass-solid: #fbfbfd;                       /* opaque fallback */
+    --glass-sheen: rgba(255, 255, 255, .72);      /* bright top-left sheet */
+    --glass-sheen-2: rgba(18, 24, 42, .05);       /* dull bottom-right sheet */
+    --glass-rim: rgba(255, 255, 255, .95);        /* specular edge, top-left */
+    --glass-rim-dark: rgba(18, 24, 42, .16);      /* shaded edge, bottom-right */
+    --glass-blur: 20px;
+    --hl: rgba(255, 255, 255, .60);               /* pointer highlight */
+    --glass-depth:
+      inset 0 1px 1px rgba(255, 255, 255, .85),
+      inset 0 -14px 26px -18px rgba(16, 22, 40, .30),
+      0 1px 2px rgba(16, 22, 40, .05),
+      0 18px 40px -24px rgba(16, 22, 40, .38);
+
+    --btn-tint: rgba(12, 13, 17, .86);
+    --btn-solid: #0d0e12;
+    --btn-rim: rgba(255, 255, 255, .50);
+    --btn-rim-dark: rgba(0, 0, 0, .45);
+    --btn-chip: rgba(255, 255, 255, .16);
+    --btn-hl: rgba(255, 255, 255, .16);
+
+    --grain: .030;
+    --r-lg: 28px; --r-md: 22px; --r-sm: 16px;
     color-scheme: light;
   }
+
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #0f0f11;
-      --card: #1a1a1e;
+      --bg: #0d0e13;
+      --card: #17181e;
       --ink: #f2f2f4;
-      --muted: #9a9aa2;
-      --line: #2a2a2f;
+      --muted: #9fa2ad;
+      --line: rgba(255, 255, 255, .09);
       --accent: #2997ff;
+      --accent-deep: #1a6ad4;
       --bezel: #050506;
       --deck: #66666c;
       --deck-lip: rgba(0, 0, 0, .5);
       --lid-back: #55555b;
-      --glow: rgba(0, 0, 0, .55);
+      --glow: rgba(0, 0, 0, .6);
       --track: rgba(255, 255, 255, .14);
-      --glass: rgba(120, 120, 130, .28);
-      --glass-rim: rgba(255, 255, 255, .22);
-      --glass-edge: rgba(255, 255, 255, .10);
-      --glass-shadow: rgba(0, 0, 0, .45);
+      --chip: rgba(255, 255, 255, .07);
+
+      --amb-1: rgba(46, 98, 214, .46);
+      --amb-2: rgba(196, 88, 60, .24);
+      --amb-3: rgba(26, 140, 142, .34);
+      --amb-4: rgba(146, 70, 100, .22);
+
+      --glass-tint: rgba(24, 26, 33, .56);
+      --glass-solid: #191a20;
+      --glass-sheen: rgba(255, 255, 255, .14);
+      --glass-sheen-2: rgba(0, 0, 0, .22);
+      --glass-rim: rgba(255, 255, 255, .30);
+      --glass-rim-dark: rgba(0, 0, 0, .55);
+      --hl: rgba(255, 255, 255, .12);
+      --glass-depth:
+        inset 0 1px 1px rgba(255, 255, 255, .18),
+        inset 0 -14px 28px -18px rgba(0, 0, 0, .7),
+        0 1px 2px rgba(0, 0, 0, .45),
+        0 22px 48px -26px rgba(0, 0, 0, .8);
+
+      --btn-tint: rgba(238, 239, 244, .90);
+      --btn-solid: #eeeff4;
+      --btn-rim: rgba(255, 255, 255, .95);
+      --btn-rim-dark: rgba(0, 0, 0, .26);
+      --btn-chip: rgba(12, 13, 17, .10);
+      --btn-hl: rgba(255, 255, 255, .55);
+
+      --grain: .05;
       color-scheme: dark;
     }
   }
+
   :root[data-theme="dark"] {
-    --bg: #0f0f11;
-    --card: #1a1a1e;
+    --bg: #0d0e13;
+    --card: #17181e;
     --ink: #f2f2f4;
-    --muted: #9a9aa2;
-    --line: #2a2a2f;
+    --muted: #9fa2ad;
+    --line: rgba(255, 255, 255, .09);
     --accent: #2997ff;
+    --accent-deep: #1a6ad4;
     --bezel: #050506;
     --deck: #66666c;
     --deck-lip: rgba(0, 0, 0, .5);
     --lid-back: #55555b;
-    --glow: rgba(0, 0, 0, .55);
+    --glow: rgba(0, 0, 0, .6);
     --track: rgba(255, 255, 255, .14);
-    --glass: rgba(120, 120, 130, .28);
-    --glass-rim: rgba(255, 255, 255, .22);
-    --glass-edge: rgba(255, 255, 255, .10);
-    --glass-shadow: rgba(0, 0, 0, .45);
+    --chip: rgba(255, 255, 255, .07);
+
+    --amb-1: rgba(46, 98, 214, .46);
+    --amb-2: rgba(196, 88, 60, .24);
+    --amb-3: rgba(26, 140, 142, .34);
+    --amb-4: rgba(146, 70, 100, .22);
+
+    --glass-tint: rgba(24, 26, 33, .56);
+    --glass-solid: #191a20;
+    --glass-sheen: rgba(255, 255, 255, .14);
+    --glass-sheen-2: rgba(0, 0, 0, .22);
+    --glass-rim: rgba(255, 255, 255, .30);
+    --glass-rim-dark: rgba(0, 0, 0, .55);
+    --hl: rgba(255, 255, 255, .12);
+    --glass-depth:
+      inset 0 1px 1px rgba(255, 255, 255, .18),
+      inset 0 -14px 28px -18px rgba(0, 0, 0, .7),
+      0 1px 2px rgba(0, 0, 0, .45),
+      0 22px 48px -26px rgba(0, 0, 0, .8);
+
+    --btn-tint: rgba(238, 239, 244, .90);
+    --btn-solid: #eeeff4;
+    --btn-rim: rgba(255, 255, 255, .95);
+    --btn-rim-dark: rgba(0, 0, 0, .26);
+    --btn-chip: rgba(12, 13, 17, .10);
+    --btn-hl: rgba(255, 255, 255, .55);
+
+    --grain: .05;
     color-scheme: dark;
   }
 
@@ -82,82 +166,226 @@
     margin: 0;
     background: var(--bg);
     color: var(--ink);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, system-ui, sans-serif;
+    font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif;
     font-feature-settings: "cv11", "ss01";
-    font-weight: 500;
+    font-weight: 450;
     font-size: 15px;
-    line-height: 1.5;
+    line-height: 1.55;
     letter-spacing: -0.011em;
     -webkit-font-smoothing: antialiased;
   }
   a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-  .stage { max-width: 640px; margin: 0 auto; padding: 128px 24px 64px; }
+  /* ===========================================================================
+     The scene behind the glass: a slow colour mesh, painted once, never
+     repainted. Gradients rather than blurred elements, so it costs nothing.
+     =========================================================================== */
+  .ambient {
+    position: fixed; inset: -24vmax; z-index: -2; pointer-events: none;
+    background:
+      radial-gradient(38vmax 30vmax at 20% 14%, var(--amb-1), transparent 62%),
+      radial-gradient(34vmax 28vmax at 84% 24%, var(--amb-2), transparent 60%),
+      radial-gradient(44vmax 34vmax at 62% 74%, var(--amb-3), transparent 64%),
+      radial-gradient(30vmax 26vmax at 10% 78%, var(--amb-4), transparent 60%),
+      var(--bg);
+  }
+  /* One fixed, non-blending grain sheet. Breaks the flatness; no repaint cost. */
+  .grain {
+    position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: var(--grain);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+  }
+  .filters { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+  /* ===========================================================================
+     The material. Four layers, in paint order:
+       1. background-color  - the tint
+       2. background-image  - pointer highlight, then the sheen sheet
+       3. ::before          - the refracting edge band (real displacement where
+                              the browser supports a filter in backdrop-filter,
+                              a graded edge everywhere else)
+       4. ::after           - the 1px rim: specular top-left, shaded bottom-right
+     =========================================================================== */
+  .glass {
+    position: relative;
+    isolation: isolate;
+    background-color: var(--glass-tint);
+    background-image:
+      radial-gradient(var(--hl-size, 220px) circle at var(--gx, -300px) var(--gy, -300px), var(--hl), transparent 68%),
+      linear-gradient(147deg, var(--glass-sheen) 0%, transparent 42%, transparent 74%, var(--glass-sheen-2) 100%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(185%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(185%);
+    box-shadow: var(--glass-depth);
+  }
+  .glass::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+    background: linear-gradient(147deg, var(--glass-rim) 0%, transparent 34%, transparent 66%, var(--glass-rim-dark) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask-composite: exclude;
+  }
+  /* The edge band. Paints above the tint, below the text. The mask is four
+     edge gradients unioned together, so the band fades inward instead of
+     stopping on a ring and leaving a second visible outline. */
+  .refract::before {
+    content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(147deg, rgba(255, 255, 255, .24), transparent 24%, transparent 76%, var(--glass-rim-dark));
+    -webkit-mask-image:
+      linear-gradient(to right,  #000, transparent var(--band, 16px)),
+      linear-gradient(to left,   #000, transparent var(--band, 16px)),
+      linear-gradient(to bottom, #000, transparent var(--band, 16px)),
+      linear-gradient(to top,    #000, transparent var(--band, 16px));
+    -webkit-mask-composite: source-over;
+    mask-image:
+      linear-gradient(to right,  #000, transparent var(--band, 16px)),
+      linear-gradient(to left,   #000, transparent var(--band, 16px)),
+      linear-gradient(to bottom, #000, transparent var(--band, 16px)),
+      linear-gradient(to top,    #000, transparent var(--band, 16px));
+    mask-composite: add;
+  }
+  /* Where a filter reference is allowed in backdrop-filter, the band really
+     bends what is under it. Everywhere else the gradient above stands in. */
+  @supports (backdrop-filter: url("#foldyRefract")) or (-webkit-backdrop-filter: url("#foldyRefract")) {
+    .refract::before {
+      -webkit-backdrop-filter: url("#foldyRefract") blur(1px);
+      backdrop-filter: url("#foldyRefract") blur(1px);
+    }
+  }
+
+  /* No backdrop-filter at all: solid surfaces, same shapes, same contrast. */
+  @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+    .glass { background-color: var(--glass-solid); }
+    .glass.button { background-color: var(--btn-solid); }
+    .refract::before { display: none; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass {
+      background-color: var(--glass-solid); background-image: none;
+      -webkit-backdrop-filter: none; backdrop-filter: none;
+    }
+    .glass.button { background-color: var(--btn-solid); }
+    .refract::before { display: none; }
+    .tray { background: var(--glass-solid); }
+    .ambient { background: var(--bg); }
+    .grain { display: none; }
+  }
+
+  /* ===========================================================================
+     Page frame
+     =========================================================================== */
+  .stage { max-width: 660px; margin: 0 auto; padding: 132px 24px 56px; }
 
   /* Top bar */
-  .topbar { position: absolute; left: 32px; top: 28px; z-index: 5; }
-  .brand { display: inline-flex; align-items: center; gap: 12px; }
-  .brand .os { color: var(--muted); font-size: 13px; }
-  .wordmark { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; letter-spacing: -0.02em; }
+  .topbar { position: absolute; left: 28px; top: 26px; z-index: 5; }
+  .brand {
+    display: inline-flex; align-items: center; gap: 12px;
+    height: 44px; padding: 0 8px 0 16px; border-radius: 999px;
+    --glass-blur: 16px; --hl-size: 160px;
+  }
+  .brand .os { color: var(--muted); font-size: 13px; letter-spacing: -0.005em; }
+  .wordmark {
+    display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+    font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif;
+    font-weight: 600; font-size: 16px; letter-spacing: -0.022em;
+  }
   .wordmark svg { width: 20px; height: 20px; }
   .pill {
+    position: relative; z-index: 1;
     display: inline-flex; align-items: center; gap: 6px;
-    height: 28px; padding: 0 12px; margin-left: 4px;
-    border: 1px solid var(--glass-edge); border-radius: 999px;
-    background: var(--glass); color: var(--ink);
-    -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
-    box-shadow: inset 0 1px 0 var(--glass-rim), 0 2px 8px var(--glass-shadow);
-    text-decoration: none; font-size: 13px; letter-spacing: -0.01em;
-    transition: transform .15s ease;
+    height: 30px; padding: 0 12px;
+    border-radius: 999px; color: var(--ink);
+    text-decoration: none; font-size: 13px; font-weight: 500; letter-spacing: -0.01em;
+    --glass-blur: 12px; --hl-size: 110px;
+    transition: transform .15s cubic-bezier(.2, 0, 0, 1);
   }
   .pill:hover { transform: translateY(-1px); }
-  .pill:focus-visible, .button:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
   /* Bend counter, top right */
   .bend-counter {
-    position: fixed; top: 28px; right: 32px; z-index: 20;
+    position: fixed; top: 26px; right: 28px; z-index: 20;
     display: inline-flex; align-items: center; gap: 6px;
-    height: 28px; padding: 0 12px; margin: 0;
-    border: 1px solid var(--glass-edge); border-radius: 999px;
-    background: var(--glass); color: var(--ink);
-    -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
-    box-shadow: inset 0 1px 0 var(--glass-rim), 0 2px 8px var(--glass-shadow);
+    height: 34px; padding: 0 14px; margin: 0;
+    border-radius: 999px; color: var(--ink);
     font-size: 13px; letter-spacing: -0.01em; pointer-events: none;
     font-variant-numeric: tabular-nums;
+    --glass-blur: 14px;
   }
-  .bend-counter::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #78907b; margin-right: 3px; }
+  .bend-counter strong { font-weight: 600; }
+  .bend-counter::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #5e8f6a; margin-right: 3px; }
   @media (max-width: 900px) { .bend-counter { top: auto; bottom: 16px; right: 16px; } }
 
   /* Intro */
-  .intro { margin-bottom: 32px; }
-  h1 { text-wrap: balance; font-size: 40px; line-height: 1.1; letter-spacing: -0.035em; font-weight: 500; margin: 0 0 16px; }
-  .lede { font-size: 19px; line-height: 1.4; letter-spacing: -0.02em; color: var(--muted); margin: 0; max-width: 34ch; }
-  .actions { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-bottom: 80px; }
-  .purchase-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .intro { margin-bottom: 30px; }
+  h1 {
+    font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif;
+    text-wrap: balance; font-size: clamp(34px, 6.4vw, 52px); line-height: 1.05;
+    letter-spacing: -0.036em; font-weight: 600; margin: 0 0 18px; max-width: 16ch;
+  }
+  .lede { font-size: 19px; line-height: 1.42; letter-spacing: -0.02em; color: var(--muted); margin: 0; max-width: 36ch; }
+  .actions { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 72px; }
+  .purchase-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+
   .button {
     display: inline-flex; align-items: center; gap: 10px;
-    height: 40px; padding: 0 6px 0 18px; border-radius: 999px;
-    background: var(--ink); color: var(--bg); text-decoration: none; letter-spacing: -0.015em;
-    transition: transform .15s ease, opacity .15s ease;
+    height: 46px; padding: 0 7px 0 20px; border-radius: 999px;
+    color: var(--bg); text-decoration: none;
+    font-size: 15.5px; font-weight: 600; letter-spacing: -0.018em;
+    --glass-tint: var(--btn-tint);
+    --glass-solid: var(--btn-solid);
+    --glass-sheen: var(--btn-rim);
+    --glass-sheen-2: rgba(0, 0, 0, .22);
+    --glass-rim: var(--btn-rim);
+    --glass-rim-dark: var(--btn-rim-dark);
+    --hl: var(--btn-hl);
+    --hl-size: 180px;
+    --band: 14px;
+    --glass-blur: 18px;
+    transition: transform .15s cubic-bezier(.2, 0, 0, 1), box-shadow .2s cubic-bezier(.2, 0, 0, 1);
   }
+  .button:hover { transform: translateY(-1px); box-shadow: var(--glass-depth), 0 12px 26px -16px rgba(16, 22, 40, .5); }
+  .button:active { transform: translateY(0) scale(.985); }
   .button .amount {
-    display: inline-flex; align-items: center; height: 28px; padding: 0 10px;
-    border-radius: 999px; background: rgba(255,255,255,.14); font-size: 13px; letter-spacing: -0.01em;
+    position: relative; z-index: 1;
+    display: inline-flex; align-items: center; height: 32px; padding: 0 12px;
+    border-radius: 999px; background: var(--btn-chip); font-size: 13px; font-weight: 500; letter-spacing: -0.005em;
   }
-  .button:hover { opacity: .88; }
-  .button:active { transform: scale(.98); }
-  .note { margin: 0; color: var(--muted); font-size: 13px; letter-spacing: -0.005em; max-width: 52ch; }
+  .note { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; letter-spacing: -0.005em; max-width: 54ch; }
   .note a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line); }
   .note a:hover { border-color: var(--ink); }
-  .note code { font: 12.5px/1 ui-monospace, "SF Mono", Menlo, monospace; background: var(--card); padding: 3px 7px; border-radius: 6px; }
+  .note code {
+    font: 12.5px/1 ui-monospace, "SF Mono", Menlo, monospace;
+    background: var(--chip); color: var(--ink); padding: 3px 7px; border-radius: 6px;
+  }
 
-  /* Figures */
-  .figure { width: min(880px, calc(100vw - 48px)); margin: 0 0 56px 50%; transform: translateX(-50%); padding: 0; }
-  .caption { margin: 20px auto 0; max-width: 44ch; text-wrap: balance; text-align: center; color: var(--muted); font-size: 13px; letter-spacing: -0.005em; }
-  .shot { margin: 0 0 56px; padding: 0; }
+  /* ===========================================================================
+     Figures. The fold is the reason the page exists, so the glass around it is
+     a static tray: gradients and rims, no backdrop-filter, nothing that would
+     make the compositor re-blur a live WebGL canvas every frame.
+     =========================================================================== */
+  .figure { width: min(920px, calc(100vw - 40px)); margin: 0 0 60px 50%; transform: translateX(-50%); padding: 0; }
+  .tray {
+    position: relative; padding: clamp(14px, 2.6vw, 30px) clamp(14px, 2.6vw, 30px) clamp(18px, 3vw, 34px);
+    border-radius: clamp(24px, 3.4vw, 40px);
+    background:
+      linear-gradient(152deg, var(--glass-sheen) 0%, transparent 40%, transparent 72%, var(--glass-sheen-2) 100%),
+      var(--glass-tint);
+    box-shadow: var(--glass-depth);
+  }
+  .tray::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+    background: linear-gradient(152deg, var(--glass-rim) 0%, transparent 32%, transparent 68%, var(--glass-rim-dark) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask-composite: exclude;
+  }
+  .caption { margin: 22px auto 0; max-width: 46ch; text-wrap: balance; text-align: center; color: var(--muted); font-size: 13.5px; letter-spacing: -0.005em; }
+  .shot { margin: 0 0 60px; padding: 0; }
   .shot img {
-    display: block; width: min(643px, 100%); height: auto; margin: 0 auto; border-radius: 12px;
-    filter: drop-shadow(0 24px 48px var(--glow)) drop-shadow(0 2px 6px rgba(0,0,0,.08));
+    display: block; width: min(643px, 100%); height: auto; margin: 0 auto; border-radius: 14px;
+    filter: drop-shadow(0 26px 52px var(--glow)) drop-shadow(0 2px 6px rgba(0, 0, 0, .08));
   }
 
   /* MacBook, sized with container units so bezel, notch and deck keep their ratio. */
@@ -175,85 +403,97 @@
   .deck { position: relative; height: 3.1cqw; background: var(--deck); border-radius: 0 0 1.03cqw 1.03cqw; }
   .lip { position: absolute; top: 0; left: 50%; width: 24.8cqw; height: 1.21cqw; transform: translateX(-50%); border-radius: 0 0 1.38cqw 1.38cqw; background: var(--deck-lip); }
 
-  /* Cards */
+  /* ===========================================================================
+     Cards
+     =========================================================================== */
   .stack { display: flex; flex-direction: column; gap: 16px; }
-  .card { background: var(--card); border-radius: 20px; }
-  section.card { padding: 24px 24px 12px; }
-  h2 { font-size: 13px; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
-  dl { margin: 0 -24px; padding: 0; }
-  .row { display: grid; grid-template-columns: 140px 1fr; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--line); }
+  .card { border-radius: var(--r-lg); --band: 24px; }
+  section.card { padding: 26px 26px 14px; }
+  h2 {
+    font-size: 12.5px; font-weight: 600; letter-spacing: 0.085em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 10px;
+  }
+  dl { position: relative; z-index: 1; margin: 0 -26px; padding: 0; }
+  .row { display: grid; grid-template-columns: 148px 1fr; gap: 18px; padding: 16px 26px; border-bottom: 1px solid var(--line); }
   .row:last-child { border-bottom: 0; }
-  dt { margin: 0; letter-spacing: -0.015em; }
+  dt { margin: 0; font-weight: 600; letter-spacing: -0.015em; }
   dd { margin: 0; color: var(--muted); }
 
   footer {
-    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-    color: var(--muted); font-size: 13px; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--line);
+    position: relative;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+    color: var(--muted); font-size: 13px; margin-top: 20px; padding: 20px 26px;
+    border-radius: var(--r-md); --band: 16px; --glass-blur: 16px;
   }
   footer a { color: inherit; text-decoration: none; }
-  footer .links { display: flex; gap: 20px; }
+  footer .links { position: relative; z-index: 1; display: flex; gap: 22px; flex-wrap: wrap; }
+  footer span { position: relative; z-index: 1; }
   footer a:hover { color: var(--ink); }
 
-  /* Take a closer look: the iPhone Duo interaction, for a lid. */
-  .closer { width: min(1040px, calc(100vw - 48px)); margin: 24px 0 72px 50%; transform: translateX(-50%); }
-  .closer h2 { margin-bottom: 20px; text-align: center; }
-  .closer-grid { display: grid; grid-template-columns: 1fr; gap: 28px; align-items: start; }
-  @media (min-width: 900px) { .closer-grid { grid-template-columns: minmax(300px, 380px) 1fr; gap: 40px; align-items: center; } }
-  .closer-copy { display: flex; flex-direction: column; gap: 12px; }
-  .state-card { background: var(--card); border-radius: 22px; padding: 22px 24px; }
-  .state-card p { margin: 0; font-size: 15.5px; line-height: 1.45; }
-  .state-card p b { font-weight: 600; }
-  .state-card .hint { display: block; margin-top: 14px; color: var(--muted); font-size: 12.5px; }
-
-  /* The lid control floats over the MacBook in glass, the way the app's preview does.
-     Here backdrop-filter has the 3D scene behind it, so the blur is real. */
-  .scene-wrap { position: relative; }
-  .fold-bar {
-    position: absolute; left: 5%; right: 5%; bottom: 4%;
-    display: flex; align-items: center; gap: 14px; padding: 6px 20px;
-    border: 1px solid var(--glass-edge); border-radius: 999px; background: var(--glass);
-    -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
-    box-shadow: inset 0 1px 0 var(--glass-rim), 0 8px 24px var(--glass-shadow);
+  /* ===========================================================================
+     Take a closer look: the iPhone Duo interaction, for a lid.
+     =========================================================================== */
+  .closer { width: min(1060px, calc(100vw - 40px)); margin: 28px 0 76px 50%; transform: translateX(-50%); }
+  .closer h2 {
+    font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif;
+    font-size: clamp(22px, 3vw, 30px); font-weight: 600; text-transform: none; letter-spacing: -0.028em;
+    color: var(--ink); margin: 0 0 22px; text-align: center;
   }
-  .fold-bar .fold-slider { flex: 1; margin-top: 0; }
-  .fold-bar .angle-readout { margin-top: 0; color: var(--ink); font-weight: 600; }
-  @media (max-width: 520px) { .fold-bar { left: 3%; right: 3%; padding: 4px 14px; gap: 10px; } }
+  .closer-grid { display: grid; grid-template-columns: 1fr; gap: 28px; align-items: start; }
+  @media (min-width: 900px) { .closer-grid { grid-template-columns: minmax(320px, 400px) 1fr; gap: 44px; align-items: center; } }
+  .closer-copy { display: flex; flex-direction: column; gap: 14px; }
+  .state-card { border-radius: var(--r-lg); padding: 24px 26px 22px; --band: 22px; }
+  .state-card > * { position: relative; z-index: 1; }
+  .state-card p { margin: 0; font-size: 16px; line-height: 1.45; letter-spacing: -0.015em; color: var(--muted); }
+  .state-card p b { font-weight: 600; color: var(--ink); }
+  .state-card .hint { display: block; margin-top: 16px; color: var(--muted); font-size: 12.5px; letter-spacing: 0.005em; }
 
-  .fold-slider { position: relative; margin-top: 10px; height: 44px; display: flex; align-items: center; }
+  .fold-slider { position: relative; margin-top: 8px; height: 44px; display: flex; align-items: center; }
   .fold-slider input {
     -webkit-appearance: none; appearance: none; width: 100%; height: 44px; margin: 0; background: transparent; cursor: pointer;
   }
   .fold-slider input:focus-visible { outline: none; }
-  .fold-slider input::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; background: var(--track); }
-  .fold-slider input::-moz-range-track { height: 8px; border-radius: 999px; background: var(--track); }
+  .fold-slider input::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; background: var(--track); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .16); }
+  .fold-slider input::-moz-range-track { height: 8px; border-radius: 999px; background: var(--track); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .16); }
   .fold-slider input::-webkit-slider-thumb {
     -webkit-appearance: none; width: 44px; height: 44px; margin-top: -18px; border: 0; border-radius: 50%;
-    background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 7l-4 5 4 5M15 7l4 5-4 5'/%3E%3C/svg%3E") center / 22px no-repeat;
-    box-shadow: 0 2px 8px rgba(0,0,0,.22); transition: transform .15s ease;
+    background: var(--accent-deep) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 7l-4 5 4 5M15 7l4 5-4 5'/%3E%3C/svg%3E") center / 22px no-repeat;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), inset 0 -2px 6px rgba(0, 0, 0, .3), 0 4px 12px rgba(10, 30, 70, .3);
+    transition: transform .15s cubic-bezier(.2, 0, 0, 1);
   }
   .fold-slider input::-moz-range-thumb {
     width: 44px; height: 44px; border: 0; border-radius: 50%;
-    background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 7l-4 5 4 5M15 7l4 5-4 5'/%3E%3C/svg%3E") center / 22px no-repeat;
-    box-shadow: 0 2px 8px rgba(0,0,0,.22);
+    background: var(--accent-deep) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 7l-4 5 4 5M15 7l4 5-4 5'/%3E%3C/svg%3E") center / 22px no-repeat;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 4px 12px rgba(10, 30, 70, .3);
   }
   .fold-slider input:active::-webkit-slider-thumb { transform: scale(1.08); }
   .fold-slider input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px var(--bg), 0 0 0 6px var(--accent); }
-  .angle-readout { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .fold-slider input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px var(--bg), 0 0 0 6px var(--accent); }
+  .angle-readout { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; margin-top: 2px; letter-spacing: -0.005em; }
 
-  .chips { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
   .chip {
-    display: inline-flex; align-items: center; gap: 12px; height: 48px; padding: 0 22px 0 18px;
-    border: 1px solid var(--glass-edge); border-radius: 999px;
-    background: var(--glass); color: var(--ink);
-    -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
-    box-shadow: inset 0 1px 0 var(--glass-rim), 0 2px 10px var(--glass-shadow);
-    font: inherit; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; cursor: pointer;
-    transition: transform .15s ease, background .2s ease;
+    display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 0 18px 0 15px;
+    border: 0; border-radius: 999px; color: var(--ink);
+    font: inherit; font-size: 15.5px; font-weight: 600; letter-spacing: -0.018em; cursor: pointer;
+    --glass-blur: 14px; --hl-size: 130px;
+    transition: transform .15s cubic-bezier(.2, 0, 0, 1), background-color .2s cubic-bezier(.2, 0, 0, 1), color .2s cubic-bezier(.2, 0, 0, 1);
   }
+  .chip > * { position: relative; z-index: 1; }
   .chip:hover { transform: translateY(-1px); }
-  .chip svg { width: 22px; height: 22px; flex-shrink: 0; }
+  .chip:active { transform: translateY(0) scale(.98); }
+  .chip svg { width: 19px; height: 19px; flex-shrink: 0; }
   .chip .on { display: none; }
-  .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .chip[aria-pressed="true"] {
+    --glass-tint: var(--accent-deep);
+    --glass-solid: var(--accent-deep);
+    --glass-sheen: rgba(255, 255, 255, .30);
+    --glass-sheen-2: rgba(0, 0, 0, .22);
+    --glass-rim: rgba(255, 255, 255, .55);
+    --glass-rim-dark: rgba(0, 0, 0, .34);
+    --hl: rgba(255, 255, 255, .22);
+    color: var(--accent-ink);
+  }
   .chip[aria-pressed="true"] .off { display: none; }
   .chip[aria-pressed="true"] .on { display: block; }
 
@@ -269,7 +509,7 @@
   .lid3d .front .panel.gl .fallback { display: none; }
   .lid3d .front .notch3d { position: absolute; top: 0; left: 50%; width: 16.5%; height: 8.2%; transform: translateX(-50%); background: var(--bezel); border-radius: 0 0 14px 14px; }
   .lid3d .back { background: linear-gradient(180deg, var(--lid-back), color-mix(in srgb, var(--lid-back) 78%, black)); transform: rotateY(180deg) translateZ(3px); }
-  .lid3d .back::after { content: ''; position: absolute; left: 50%; top: 50%; width: 14%; aspect-ratio: 1; transform: translate(-50%, -50%) scaleX(-1); border-radius: 22%; background: rgba(255,255,255,.18); }
+  .lid3d .back::after { content: ''; position: absolute; left: 50%; top: 50%; width: 14%; aspect-ratio: 1; transform: translate(-50%, -50%) scaleX(-1); border-radius: 22%; background: rgba(255, 255, 255, .18); }
   .deck3d {
     position: absolute; left: 0; right: 0; top: 100%; height: 0; padding-top: 68%;
     transform-origin: 50% 0; transform: rotateX(90deg); border-radius: 2.2%; background: var(--deck); /* lies flat, toward the viewer */
@@ -281,32 +521,55 @@
 
   @media (prefers-reduced-motion: reduce) {
     .pill, .button, .chip, .fold-slider input::-webkit-slider-thumb { transition: none; }
+    .pill:hover, .button:hover, .chip:hover, .button:active, .chip:active { transform: none; }
   }
-  @media (max-width: 520px) {
-    .topbar { left: 24px; top: 24px; }
-    .brand { flex-wrap: wrap; gap: 8px 12px; }
-    .pill { margin-left: 0; }
-    .stage { padding-top: 96px; }
-    h1 { font-size: 32px; }
-    .lede { font-size: 17px; }
+
+  @media (max-width: 700px) {
+    .stage { padding: 104px 20px 48px; }
+    .topbar { left: 20px; top: 20px; }
     .row { grid-template-columns: 1fr; gap: 4px; }
-    .chip { height: 44px; font-size: 16px; }
+    section.card { padding: 22px 20px 12px; }
+    dl { margin: 0 -20px; }
+    .row { padding: 14px 20px; }
+    footer { padding: 18px 20px; }
     .closer { width: calc(100vw - 32px); }
+    .figure { width: calc(100vw - 32px); margin-bottom: 48px; }
+    .state-card { padding: 22px 20px 20px; }
+  }
+  @media (max-width: 420px) {
+    .brand { height: 42px; padding: 0 6px 0 13px; gap: 9px; }
+    .wordmark { font-size: 15px; }
+    .pill { padding: 0 10px; }
+    .lede { font-size: 17px; }
+    .purchase-row { gap: 14px; }
+    .chip { height: 44px; font-size: 15px; padding: 0 15px 0 13px; }
   }
 </style>
 </head>
 <body>
+<div class="ambient" aria-hidden="true"></div>
+
+<svg class="filters" aria-hidden="true" focusable="false" width="0" height="0">
+  <!-- Edge refraction. Fractal noise, softened, then used to displace whatever
+       sits behind the rim of a glass surface, so the edge bends the scene. -->
+  <filter id="foldyRefract" x="-14%" y="-14%" width="128%" height="128%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.009 0.014" numOctaves="2" seed="11" result="noise"/>
+    <feGaussianBlur in="noise" stdDeviation="3" result="soft"/>
+    <feDisplacementMap in="SourceGraphic" in2="soft" scale="12" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
 <main class="stage">
-  <p class="bend-counter" id="bendCounter" title="Full bends you have made on this page. Scroll back up and bend again."><strong id="bendTotal">0</strong>&nbsp;bends this visit</p>
+  <p class="bend-counter glass" id="bendCounter" title="Full bends you have made on this page. Scroll back up and bend again."><strong id="bendTotal">0</strong>&nbsp;bends this visit</p>
 
   <div class="topbar">
-    <div class="brand">
+    <div class="brand glass">
       <a class="wordmark" href="#">
         <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 16V7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 16h15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         Foldy
       </a>
       <span class="os">macOS</span>
-      <a class="pill" href="https://github.com/alexey1312/foldy">Open source<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6h7M6.5 3 9.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <a class="pill glass" href="https://github.com/alexey1312/foldy">Open source<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6h7M6.5 3 9.5 6l-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </div>
   </div>
 
@@ -317,22 +580,24 @@
 
   <div class="actions">
     <div class="purchase-row">
-      <a class="button" href="https://github.com/alexey1312/foldy/releases/latest/download/Foldy.dmg">Download Foldy<span class="amount">Free</span></a>
+      <a class="button glass refract" href="https://github.com/alexey1312/foldy/releases/latest/download/Foldy.dmg">Download Foldy<span class="amount">Free</span></a>
       <p class="note">The latest DMG. <a href="https://github.com/alexey1312/foldy/releases">All releases</a>, or build it yourself: <code>git clone</code>, then <code>make app</code>. One menu bar icon, no account, no license key.</p>
     </div>
     <p class="note">Needs an Apple silicon MacBook with a lid angle sensor and macOS 14 or later. Every frame is drawn with Metal on your Mac and never leaves it.</p>
   </div>
 
   <figure class="figure">
-    <div class="mac">
-      <div class="lid">
-        <div class="screen" id="scrollScreen">
-          <canvas id="scrollCanvas" aria-hidden="true"></canvas>
-          <div class="fallback" id="scrollFallback"></div>
+    <div class="tray">
+      <div class="mac">
+        <div class="lid">
+          <div class="screen" id="scrollScreen">
+            <canvas id="scrollCanvas" aria-hidden="true"></canvas>
+            <div class="fallback" id="scrollFallback"></div>
+          </div>
+          <div class="notch"><svg viewBox="0 0 64 9" preserveAspectRatio="none"><path d="M0 0Q2 0 2 2V5Q2 9 6 9H58Q62 9 62 5V2Q62 0 64 0Z" fill="currentColor"/></svg></div>
         </div>
-        <div class="notch"><svg viewBox="0 0 64 9" preserveAspectRatio="none"><path d="M0 0Q2 0 2 2V5Q2 9 6 9H58Q62 9 62 5V2Q62 0 64 0Z" fill="currentColor"/></svg></div>
+        <div class="deck"><div class="lip"></div></div>
       </div>
-      <div class="deck"><div class="lip"></div></div>
     </div>
     <figcaption class="caption">Scroll. The screen bends, blurs and shades, just like when your lid comes down.</figcaption>
   </figure>
@@ -341,75 +606,70 @@
     <h2 id="closerTitle">Take a closer look</h2>
     <div class="closer-grid">
       <div class="closer-copy">
-        <div class="state-card">
+        <div class="state-card glass refract">
           <p><b id="stateTitle">Foldable desktop.</b> <span id="stateBlurb">Offers the fluid fold of iPhone Duo in a Mac you already own. The base of the desktop stays put; the top folds away, blurs and falls into shadow.</span></p>
-          <span class="hint" id="dragHint">Drag the bar over the MacBook to open and close</span>
-        </div>
-        <div class="chips" id="chips" role="group" aria-label="Lid positions and styles">
-          <button class="chip" type="button" data-chip="open"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Open</button>
-          <button class="chip" type="button" data-chip="halfway"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Halfway</button>
-          <button class="chip" type="button" data-chip="closed"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Closed</button>
-          <button class="chip" type="button" data-chip="silk"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Silk</button>
-          <button class="chip" type="button" data-chip="shade"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Shade</button>
-          <button class="chip" type="button" data-chip="frost"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Frost</button>
-        </div>
-      </div>
-      <div class="scene-wrap">
-        <div class="scene" aria-hidden="true">
-          <div class="rig">
-            <div class="lid3d" id="lid3d">
-              <div class="face front">
-                <div class="panel" id="lidPanel">
-                  <canvas id="lidCanvas"></canvas>
-                  <div class="fallback" id="lidFallback"></div>
-                </div>
-                <div class="notch3d"></div>
-              </div>
-              <div class="face back"></div>
-            </div>
-            <div class="hinge"></div>
-            <div class="deck3d"></div>
-          </div>
-        </div>
-        <div class="fold-bar">
+          <span class="hint" id="dragHint">Drag below to open and close</span>
           <div class="fold-slider">
             <input type="range" id="lidRange" min="0" max="135" step="0.5" value="135" aria-label="Lid angle in degrees">
           </div>
-          <span class="angle-readout"><span id="angleReadout">135°</span></span>
+          <div class="angle-readout"><span id="angleReadout">135°</span> · lid angle</div>
+        </div>
+        <div class="chips" id="chips" role="group" aria-label="Lid positions and styles">
+          <button class="chip glass" type="button" data-chip="open"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Open</button>
+          <button class="chip glass" type="button" data-chip="halfway"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Halfway</button>
+          <button class="chip glass" type="button" data-chip="closed"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Closed</button>
+          <button class="chip glass" type="button" data-chip="silk"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Silk</button>
+          <button class="chip glass" type="button" data-chip="shade"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Shade</button>
+          <button class="chip glass" type="button" data-chip="frost"><svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Frost</button>
+        </div>
+      </div>
+      <div class="scene" aria-hidden="true">
+        <div class="rig">
+          <div class="lid3d" id="lid3d">
+            <div class="face front">
+              <div class="panel" id="lidPanel">
+                <canvas id="lidCanvas"></canvas>
+                <div class="fallback" id="lidFallback"></div>
+              </div>
+              <div class="notch3d"></div>
+            </div>
+            <div class="face back"></div>
+          </div>
+          <div class="hinge"></div>
+          <div class="deck3d"></div>
         </div>
       </div>
     </div>
   </section>
 
   <figure class="shot">
-    <img src="settings.png" width="940" height="820" alt="Foldy's Appearance settings: a live MacBook preview with a Liquid Glass lid control floating over it, glass pills for Open, Halfway, Closed, Silk, Shade and Frost, and the three style thumbnails." loading="lazy">
-    <figcaption class="caption">The lid control floats over the preview in Liquid Glass. Three styles, with perspective, blur, shadow and bend on sliders.</figcaption>
+    <img src="settings.png" width="900" height="728" alt="Foldy's Appearance settings: a live MacBook preview, a drag-to-open slider, Silk, Shade and Frost styles, and perspective, blur, shadow and bend controls." loading="lazy">
+    <figcaption class="caption">Three styles. Perspective, blur, shadow and bend on sliders. Follow the lid, or drag the angle yourself.</figcaption>
   </figure>
 
   <div class="stack">
-    <section class="card">
+    <section class="card glass refract">
       <h2>How it works</h2>
       <dl>
         <div class="row"><dt>Lid sensor</dt><dd>Reads the hinge angle from the Mac's own sensor over HID. It listens for reports and polls only while the lid is moving; no accessibility hacks.</dd></div>
         <div class="row"><dt>Live desktop</dt><dd>Captures the screen with ScreenCaptureKit and renders the tilt with Metal, so windows and wallpaper move together. The overlay excludes itself from the capture.</dd></div>
         <div class="row"><dt>Three styles</dt><dd>Silk, Shade and Frost. Tune perspective, blur, shadow and bend, or set the angle where it clears.</dd></div>
         <div class="row"><dt>Bend</dt><dd>Not just a tilt: the sheet curls from the hinge, so the base stays put and only the upper part folds back, like a page. The demo above runs the same shader in WebGL.</dd></div>
-        <div class="row"><dt>Liquid Glass</dt><dd>On macOS 26 Tahoe the lid control floats over the preview in glass, and the pills and buttons are glass too. On Sonoma and Sequoia the same controls draw the way they always did.</dd></div>
         <div class="row"><dt>Sound</dt><dd>A soft click when the lid opens and the desktop clears. Synthesised on the spot; switch it off in General.</dd></div>
         <div class="row"><dt>Menu bar</dt><dd>Lives quietly in the menu bar. Pause with a click or Esc, or run the fold on demand with Try It Now.</dd></div>
       </dl>
     </section>
 
-    <section class="card">
+    <section class="card glass refract">
       <h2>Requirements</h2>
       <dl>
-        <div class="row"><dt>macOS</dt><dd>14 Sonoma or later. 26 Tahoe adds Liquid Glass to the settings and the welcome tour.</dd></div>
+        <div class="row"><dt>macOS</dt><dd>14 Sonoma or later.</dd></div>
         <div class="row"><dt>Hardware</dt><dd>Apple silicon MacBook with a lid angle sensor. The 2019 16-inch MacBook Pro has one too.</dd></div>
         <div class="row"><dt>Permissions</dt><dd>Screen Recording, so the desktop can be captured. Without it Foldy folds a sample wallpaper instead.</dd></div>
       </dl>
     </section>
 
-    <section class="card">
+    <section class="card glass refract">
       <h2>Private by design</h2>
       <dl>
         <div class="row"><dt>On device</dt><dd>Frames go from the capture straight to the GPU. Nothing is recorded, saved or uploaded; the app has no network code at all.</dd></div>
@@ -417,12 +677,14 @@
       </dl>
     </section>
 
-    <footer>
+    <footer class="glass refract">
       <span>© <span id="year"></span> Foldy</span>
       <nav class="links"><a href="https://github.com/alexey1312/foldy">GitHub</a><a href="https://github.com/alexey1312/foldy/blob/main/README.md">Credits</a><a href="https://www.apple.com/iphone-duo/">iPhone Duo</a></nav>
     </footer>
   </div>
 </main>
+
+<div class="grain" aria-hidden="true"></div>
 
 <script>
 (function () {
@@ -745,6 +1007,39 @@
 })();
 </script>
 
+<script>
+/* The glass answers the pointer: a specular highlight that tracks the cursor.
+   No layout is read per frame. Each surface caches its own rect on enter and
+   only re-measures when a scroll or resize has invalidated it; the write is a
+   single custom property, coalesced into one animation frame. */
+(function () {
+  'use strict';
+  if (!window.matchMedia || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  var stale = false;
+  addEventListener('scroll', function () { stale = true; }, { passive: true });
+  addEventListener('resize', function () { stale = true; }, { passive: true });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.glass'), function (el) {
+    var rect = null, raf = 0, x = 0, y = 0;
+    function measure() { rect = el.getBoundingClientRect(); stale = false; }
+    el.addEventListener('pointerenter', measure);
+    el.addEventListener('pointermove', function (e) {
+      if (!rect || stale) measure();
+      x = e.clientX - rect.left; y = e.clientY - rect.top;
+      if (raf) return;
+      raf = requestAnimationFrame(function () {
+        raf = 0;
+        el.style.setProperty('--gx', x.toFixed(1) + 'px');
+        el.style.setProperty('--gy', y.toFixed(1) + 'px');
+      });
+    });
+    el.addEventListener('pointerleave', function () {
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      el.style.removeProperty('--gx');
+      el.style.removeProperty('--gy');
+    });
+  });
+})();
 </script>
 </body>
 </html>
