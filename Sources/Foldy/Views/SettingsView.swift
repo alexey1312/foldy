@@ -15,8 +15,13 @@ struct SettingsView: View {
         var id: String { rawValue }
     }
 
+    /// The window has no toolbar, so its titlebar is the plain 28 pt drag strip. The
+    /// sidebar's material runs up behind it; both columns inset their content by this
+    /// much so nothing sits under the traffic lights.
+    static let titlebarHeight: CGFloat = 28
+
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: .constant(.all)) {
             List(selection: $pane) {
                 Section("Settings") {
                     SidebarRow(title: "General", symbol: "gearshape.fill", tint: .gray).tag(Pane.general)
@@ -27,20 +32,33 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.sidebar)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                Color.clear.frame(height: Self.titlebarHeight)
+            }
+            // The split view hands itself a sidebar toggle. With no toolbar to hold it,
+            // it lands loose in the middle of the sidebar; and with three panes and no
+            // app menu to bring the sidebar back, there is nothing for it to do anyway.
+            .toolbar(removing: .sidebarToggle)
             .navigationSplitViewColumnWidth(min: 190, ideal: 200, max: 240)
         } detail: {
-            ScrollView {
-                Group {
-                    switch pane {
-                    case .general: GeneralSettingsView(controller: controller)
-                    case .appearance: AppearanceSettingsView(controller: controller)
-                    case .about: AboutView(controller: controller)
+            // The gap is a sibling of the scroll view, not an inset on it: an inset is
+            // something the pane scrolls under, and the tops of its headings showed
+            // through in the titlebar.
+            VStack(spacing: 0) {
+                Color.clear.frame(height: Self.titlebarHeight)
+                ScrollView {
+                    Group {
+                        switch pane {
+                        case .general: GeneralSettingsView(controller: controller)
+                        case .appearance: AppearanceSettingsView(controller: controller)
+                        case .about: AboutView(controller: controller)
+                        }
                     }
+                    .frame(maxWidth: 680, alignment: .leading)
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 28)
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: 680, alignment: .leading)
-                .padding(.horizontal, 32)
-                .padding(.vertical, 28)
-                .frame(maxWidth: .infinity)
             }
             .background(.background)
         }

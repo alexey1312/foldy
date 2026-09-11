@@ -1,4 +1,4 @@
-.PHONY: build app run test snapshot icon clean
+.PHONY: build app run test snapshot shots icon clean
 
 build:
 	swift build
@@ -21,6 +21,15 @@ snapshot:
 	.build/debug/foldy-snapshot --out docs/snapshots/macbook-open.png --scene macbook --lid 135 --width 1200 --background white
 	.build/debug/foldy-snapshot --out docs/snapshots/macbook-halfway.png --scene macbook --lid 60 --width 1200 --background white
 	.build/debug/foldy-snapshot --out docs/snapshots/macbook-closing.png --scene macbook --lid 28 --style frost --width 1200 --background white
+
+# The window images in README.md and on the site. Each run captures its own window
+# and quits, so no lid, no Screen Recording grant and no clicking are needed.
+shots: app
+	build/Foldy.app/Contents/MacOS/Foldy --screenshot-settings docs/settings-general.png --pane general --appearance dark --window-height 820
+	build/Foldy.app/Contents/MacOS/Foldy --screenshot-settings docs/settings-appearance.png --pane appearance --appearance dark --window-height 820
+	build/Foldy.app/Contents/MacOS/Foldy --screenshot-onboarding docs/onboarding-capture.png --step 2 --appearance dark
+	build/Foldy.app/Contents/MacOS/Foldy --screenshot-fold docs/fold-overlay.png
+	command cp -f docs/settings-appearance.png site/settings.png
 
 icon:
 	Scripts/make-icon.sh

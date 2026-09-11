@@ -16,7 +16,7 @@ final class OnboardingWindowController {
         let view = OnboardingView(controller: controller, initialStep: step ?? controller.settings.onboardingStep) { [weak self] in
             self?.close()
         }
-        let host = NSHostingController(rootView: view)
+        let host = NSHostingController(rootView: view.screenshotControlState())
         let window = NSWindow(contentViewController: host)
         window.title = Self.windowTitle
         window.styleMask = [.titled, .closable, .fullSizeContentView]

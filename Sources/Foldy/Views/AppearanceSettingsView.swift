@@ -12,23 +12,9 @@ struct AppearanceSettingsView: View {
         VStack(alignment: .leading, spacing: 24) {
             PaneHeader(title: "Appearance", symbol: "circle.lefthalf.filled", tint: .blue)
 
-            if let graphics = controller.graphics {
-                MacBookPreviewView(
-                    graphics: graphics,
-                    lidAngle: controller.previewAngle,
-                    parameters: settings.parameters,
-                    curve: settings.curve
-                )
-                .frame(height: 340)
-                .frame(maxWidth: .infinity)
-            } else {
-                Text(controller.graphicsError ?? "Metal is not available.")
-                    .foregroundStyle(.secondary)
-            }
+            previewStage
 
-            // The "take a closer look" panel: a sentence about the state, the drag hint,
-            // and the slider that opens and closes the lid.
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
                 (Text(chipTitle).bold() + Text(" ") + Text(chipBlurb))
                     .font(.system(size: 15))
                     .lineSpacing(3)
@@ -37,32 +23,16 @@ struct AppearanceSettingsView: View {
                 Text(dragHint)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
-                HStack(spacing: 14) {
-                    FoldSlider(value: $settings.previewAngle, range: 0...FoldCurve.fullyOpenAngle)
-                        .disabled(followsLid)
-                        .onChange(of: settings.previewAngle) { _, angle in
-                            if let chip = selectedChip, abs(chip.angle(curve: settings.curve) - angle) > 0.5 {
-                                selectedChip = nil
-                            }
-                        }
-                    Text("\(Int(controller.previewAngle.rounded()))°")
-                        .font(.system(size: 14, weight: .medium).monospacedDigit())
-                        .frame(width: 44, alignment: .trailing)
-                    Toggle(isOn: $settings.previewFollowsLid) {
-                        Text("Follow lid")
-                    }
-                    .toggleStyle(.switch)
-                    .disabled(!controller.sensorAvailable)
-                    .help(controller.sensorAvailable ? "Move the preview with the real lid." : "No lid angle sensor on this Mac.")
-                }
             }
-            .padding(20)
-            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(.quaternary.opacity(0.45)))
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), alignment: .leading, spacing: 10) {
-                ForEach(Chip.allCases) { chip in
-                    ChipButton(title: chip.title, selected: selectedChip == chip) {
-                        select(chip)
+            // One container for the six pills: glass cannot sample glass, so without it
+            // each one opens a backdrop of its own and they stop matching.
+            GlassGroup(spacing: 10) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), alignment: .leading, spacing: 10) {
+                    ForEach(Chip.allCases) { chip in
+                        ChipButton(title: chip.title, selected: selectedChip == chip) {
+                            select(chip)
+                        }
                     }
                 }
             }
@@ -96,6 +66,7 @@ struct AppearanceSettingsView: View {
                 RowDivider()
                 SettingsRow(title: "Reset to the \(settings.style.title) defaults") {
                     Button("Reset") { settings.resetParameters() }
+                        .glassButtonStyle()
                         .disabled(!settings.parametersAreCustom)
                 }
             }
@@ -112,12 +83,75 @@ struct AppearanceSettingsView: View {
         .onChange(of: settings.parameters) { _, _ in controller.evaluate() }
     }
 
+    /// The MacBook on a lit stage, with the lid control floating over it in glass.
+    ///
+    /// This is the one surface in Foldy with something worth refracting, so it is the
+    /// one place the bar is glass rather than a card. The slider's thumb stays solid:
+    /// glass inside glass cannot sample its neighbour and comes out flat.
+    private var previewStage: some View {
+        @Bindable var settings = settings
+        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+        return VStack(spacing: 0) {
+            if let graphics = controller.graphics {
+                MacBookPreviewView(
+                    graphics: graphics,
+                    lidAngle: controller.previewAngle,
+                    parameters: settings.parameters,
+                    curve: settings.curve
+                )
+                .frame(height: 320)
+            } else {
+                Text(controller.graphicsError ?? "Metal is not available.")
+                    .foregroundStyle(.secondary)
+                    .frame(height: 320)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(height: 396)
+        .frame(maxWidth: .infinity)
+        .background(
+            LinearGradient(
+                colors: [.accentColor.opacity(0.20), .accentColor.opacity(0.05), .primary.opacity(0.07)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .overlay(alignment: .bottom) {
+            GlassGroup(spacing: 20) {
+                HStack(spacing: 14) {
+                    FoldSlider(value: $settings.previewAngle, range: 0...FoldCurve.fullyOpenAngle)
+                        .disabled(followsLid)
+                        .onChange(of: settings.previewAngle) { _, angle in
+                            if let chip = selectedChip, abs(chip.angle(curve: settings.curve) - angle) > 0.5 {
+                                selectedChip = nil
+                            }
+                        }
+                    Text("\(Int(controller.previewAngle.rounded()))°")
+                        .font(.system(size: 14, weight: .medium).monospacedDigit())
+                        .frame(width: 44, alignment: .trailing)
+                    Toggle(isOn: $settings.previewFollowsLid) {
+                        Text("Follow lid")
+                    }
+                    .toggleStyle(.switch)
+                    .disabled(!controller.sensorAvailable)
+                    .help(controller.sensorAvailable ? "Move the preview with the real lid." : "No lid angle sensor on this Mac.")
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+                .glassBackground(in: Capsule())
+            }
+            .padding(14)
+        }
+        .clipShape(shape)
+        .overlay { shape.strokeBorder(.primary.opacity(0.07)) }
+    }
+
     private var followsLid: Bool {
         settings.previewFollowsLid && controller.sensorAvailable
     }
 
     private var dragHint: String {
-        followsLid ? "Following the lid. Switch it off to drag the angle yourself." : "Drag below to open and close"
+        followsLid ? "Following the real lid. Switch it off to drag the angle yourself." : "Drag the bar over the preview to open and close the lid."
     }
 
     private var chipTitle: String {
@@ -185,6 +219,7 @@ struct AppearanceSettingsView: View {
 }
 
 /// A pill with a plus in a circle, the way the iPhone Duo page lists its states.
+/// Glass on Tahoe; the one that is picked takes the high-contrast prominent capsule.
 struct ChipButton: View {
     let title: String
     let selected: Bool
@@ -198,14 +233,15 @@ struct ChipButton: View {
                 Text(title.trimmingCharacters(in: CharacterSet(charactersIn: ".")))
                     .font(.system(size: 14, weight: .semibold))
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Capsule().fill(selected ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.06)))
-            .overlay(Capsule().strokeBorder(selected ? Color.accentColor.opacity(0.6) : .clear))
+            // Glass only registers hits where there is content; without this the
+            // padding around a short word is dead.
+            .contentShape(.capsule)
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(selected ? Color.accentColor : .primary)
+        .glassButtonStyle(selected ? .prominent : .standard)
+        .buttonBorderShape(.capsule)
     }
 }
 
