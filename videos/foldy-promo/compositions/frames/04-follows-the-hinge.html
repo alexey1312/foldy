@@ -1,0 +1,311 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "SF Pro";
+      src: url("assets/fonts/SFNS.ttf") format("truetype");
+      font-weight: 1 1000;
+      font-display: block;
+    }
+
+    #root {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: "SF Pro", sans-serif;
+      font-optical-sizing: auto;
+      color: #0d0e12;
+    }
+
+    /* Full-bleed light ground with the site's ambient washes (clip layer, not #root). */
+    #f04-follows-the-hinge-ground {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      background-color: #ecedf2;
+      background-image:
+        radial-gradient(900px 700px at 8% 4%, rgba(104, 152, 255, 0.34), rgba(104, 152, 255, 0) 70%),
+        radial-gradient(860px 640px at 94% 2%, rgba(255, 186, 150, 0.26), rgba(255, 186, 150, 0) 70%),
+        radial-gradient(1200px 520px at 50% 108%, rgba(132, 216, 209, 0.28), rgba(132, 216, 209, 0) 72%);
+    }
+
+    /* The MacBook still: exactly the host box the hoisted videos use (422, 120, 1075x688). */
+    #f04-follows-the-hinge-still {
+      position: absolute;
+      left: 422px;
+      top: 120px;
+      width: 1075px;
+      height: 688px;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* Headline band, top-centre. Two lines share one slot for the velocity-matched cut. */
+    #f04-follows-the-hinge-head {
+      position: absolute;
+      left: 0;
+      top: 56px;
+      width: 1920px;
+      height: 80px;
+    }
+    .f04-follows-the-hinge-h2wrap {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 80px;
+    }
+    .f04-follows-the-hinge-h2 {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      margin: 0;
+      text-align: center;
+      font-family: "SF Pro", sans-serif;
+      font-size: 2.6cqw;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: #0d0e12;
+      white-space: nowrap;
+    }
+
+    /* Foldy's lid bar — Liquid Glass pill, blue fill track, blue knob, degree readout. */
+    #f04-follows-the-hinge-bar {
+      position: absolute;
+      left: 510px;
+      top: 784px;
+      width: 900px;
+      height: 96px;
+      border-radius: 100px;
+      background: rgba(255, 255, 255, 0.62);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      box-shadow:
+        0 0 0 1px rgba(14, 18, 32, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      box-sizing: border-box;
+    }
+    #f04-follows-the-hinge-track {
+      position: absolute;
+      left: 48px;
+      top: 42px;
+      width: 622px;
+      height: 12px;
+      border-radius: 6px;
+      background: rgba(10, 132, 255, 0.15);
+      overflow: hidden;
+    }
+    #f04-follows-the-hinge-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 622px;
+      height: 12px;
+      border-radius: 6px;
+      background: #0a84ff;
+    }
+    #f04-follows-the-hinge-knob {
+      position: absolute;
+      left: 48px;
+      top: 48px;
+      width: 36px;
+      height: 36px;
+      margin-left: -18px;
+      margin-top: -18px;
+      border-radius: 50%;
+      background: #0a84ff;
+      border: 3px solid #ffffff;
+      box-sizing: border-box;
+      box-shadow: 0 0 0 1px rgba(0, 98, 214, 0.28);
+    }
+    #f04-follows-the-hinge-readout {
+      position: absolute;
+      left: 710px;
+      top: 0;
+      width: 150px;
+      height: 96px;
+      line-height: 96px;
+      text-align: right;
+      font-family: "SF Pro", sans-serif;
+      font-size: 3cqw;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      color: #0a84ff;
+      white-space: nowrap;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="04-follows-the-hinge"
+    data-start="0"
+    data-duration="5.5"
+    data-width="1920"
+    data-height="1080"
+  >
+    <div
+      id="f04-follows-the-hinge-ground"
+      class="clip"
+      data-start="0"
+      data-duration="5.5"
+      data-track-index="0"
+    ></div>
+
+    <!-- Scene 1 pre-roll: first frame of the close clip, same pixel box as both videos -->
+    <img
+      id="f04-follows-the-hinge-still"
+      class="clip"
+      src="assets/macbook-open-silk.png"
+      alt=""
+      data-start="0"
+      data-duration="0.5"
+      data-track-index="1"
+    />
+
+    <!-- Scene 2: lid closes 135 -> 22 on a cosine ease, 3.0 s -->
+    <!-- approved frame video hoisted by assemble-index -->
+
+    <!-- Scene 3: lid rises, desktop clears — first 1.5 s of the open clip -->
+    <!-- approved frame video hoisted by assemble-index -->
+
+    <div id="f04-follows-the-hinge-head">
+      <div id="f04-follows-the-hinge-wrap-a" class="f04-follows-the-hinge-h2wrap">
+        <h2 id="f04-follows-the-hinge-h2-a" class="f04-follows-the-hinge-h2">Reads the real hinge angle.</h2>
+      </div>
+      <div id="f04-follows-the-hinge-wrap-b" class="f04-follows-the-hinge-h2wrap">
+        <h2 id="f04-follows-the-hinge-h2-b" class="f04-follows-the-hinge-h2">Lid up — the desktop clears.</h2>
+      </div>
+    </div>
+
+    <div id="f04-follows-the-hinge-bar">
+      <div id="f04-follows-the-hinge-track">
+        <div id="f04-follows-the-hinge-fill"></div>
+      </div>
+      <div id="f04-follows-the-hinge-knob"></div>
+      <div id="f04-follows-the-hinge-readout">135°</div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      window.__timelines = window.__timelines || {};
+      var ID = "04-follows-the-hinge";
+      var tl = gsap.timeline({ paused: true });
+
+      var TRACK_W = 622;
+      var MAX_DEG = 135;
+      var CLOSE_AT = 0.5; // macbook-close-silk.webm window
+      var CLOSE_DUR = 3.0;
+      var OPEN_AT = 3.5; // macbook-open-silk.webm window (media 0 -> 1.5 s)
+      var OPEN_DUR = 1.5;
+      var CUT_AT = 3.8; // headline swap
+
+      var fill = document.getElementById("f04-follows-the-hinge-fill");
+      var knob = document.getElementById("f04-follows-the-hinge-knob");
+      var readout = document.getElementById("f04-follows-the-hinge-readout");
+
+      // Lid angle shown by the clips, as a function of frame time (seek-safe, pure).
+      // close: θ(t) = 135 − 113·(1−cos(π·t/3))/2   open: θ(t) = 22 + 113·(1−cos(π·t/3))/2
+      function lidAngle(T) {
+        if (T <= CLOSE_AT) return 135;
+        if (T < OPEN_AT) {
+          var tc = Math.min(T - CLOSE_AT, CLOSE_DUR);
+          return 135 - (113 * (1 - Math.cos((Math.PI * tc) / 3))) / 2;
+        }
+        var to = Math.min(T - OPEN_AT, OPEN_DUR);
+        return 22 + (113 * (1 - Math.cos((Math.PI * to) / 3))) / 2;
+      }
+
+      var lastText = "135°";
+      function applyAngle(T) {
+        var deg = lidAngle(T);
+        var frac = deg / MAX_DEG;
+        gsap.set(fill, { x: (frac - 1) * TRACK_W });
+        gsap.set(knob, { x: frac * TRACK_W });
+        var text = Math.round(deg) + "°";
+        if (text !== lastText) {
+          readout.textContent = text;
+          lastText = text;
+        }
+      }
+
+      // Initial state = 135° (knob at the right end, full fill).
+      applyAngle(0);
+
+      // ---- The live-sync couple: one clip-clock proxy drives knob, fill and readout ----
+      // Linear proxy over the whole frame; the cosine lives in lidAngle(), which is the
+      // exact sine.inOut the video frames were rendered with — picture and control share one clock.
+      tl.addLabel("close", CLOSE_AT);
+      tl.addLabel("open", OPEN_AT);
+      var clock = { t: 0 };
+      tl.fromTo(
+        clock,
+        { t: 0 },
+        {
+          t: 5,
+          duration: 5,
+          ease: "none",
+          onUpdate: function () {
+            applyAngle(clock.t);
+          },
+        },
+        0
+      );
+
+      // ---- Scene 1 (0.0–0.5): headline settles in, lid bar rises into place ----
+      tl.fromTo(
+        "#f04-follows-the-hinge-h2-a",
+        { y: 28, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.55, ease: "expo.out" },
+        0.05
+      );
+      tl.fromTo(
+        "#f04-follows-the-hinge-bar",
+        { y: 64, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" },
+        0.12
+      );
+
+      // ---- Scene 3 seam (3.8 s): cut-the-curve, upward, whole-line variant ----
+      // Exit: accelerates up on power4.in, fade dies ~0.02 s before the cut.
+      tl.fromTo(
+        "#f04-follows-the-hinge-h2-a",
+        { y: 0 },
+        { y: -140, duration: 0.34, ease: "power4.in", immediateRender: false },
+        CUT_AT - 0.34
+      );
+      tl.fromTo(
+        "#f04-follows-the-hinge-wrap-a",
+        { opacity: 1 },
+        { opacity: 0, duration: 0.3, ease: "power1.in", immediateRender: false },
+        CUT_AT - 0.32
+      );
+      // Hard cut: the incoming line's slot switches on exactly at the cut.
+      tl.fromTo(
+        "#f04-follows-the-hinge-wrap-b",
+        { autoAlpha: 0 },
+        { autoAlpha: 1, duration: 0.01, ease: "none" },
+        CUT_AT - 0.01
+      );
+      // Entry: ignites already moving up at matched velocity, decelerates on power4.out.
+      tl.fromTo(
+        "#f04-follows-the-hinge-h2-b",
+        { y: 140, opacity: 0.35 },
+        { y: 0, opacity: 1, duration: 0.4, ease: "power4.out" },
+        CUT_AT
+      );
+
+      window.__timelines[ID] = tl;
+    })();
+  </script>
+</template>

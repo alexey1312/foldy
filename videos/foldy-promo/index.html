@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js" integrity="sha384-sG0Hv1tP1lZCk9KQmrIbY/XNwi+OY84GQqhMscbnsoBFqAz8KNCil1kvfL3Hbbk2" crossorigin="anonymous"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #000;
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #ECEDF2;
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="30.5"
+      data-width="1920"
+      data-height="1080"
+    >
+      <video id="el-01-close-the-lid-video-0" src="assets/desktop-fold-silk.mp4" preload="auto" muted playsinline
+        class="clip"
+        style="position:absolute;left:0px;top:-168px;width:1920px;height:1248px;object-fit:fill"
+        data-start="0.3"
+        data-duration="2.5"
+        data-track-index="1003"
+      ></video>
+
+      <div
+        id="el-01-close-the-lid"
+        class="scene"
+        data-composition-id="01-close-the-lid"
+        data-composition-src="compositions/frames/01-close-the-lid.html"
+        data-start="0"
+        data-duration="5.1"
+        data-track-index="0"
+      ></div>
+
+      <div
+        id="el-02-meet-foldy"
+        class="scene"
+        data-composition-id="02-meet-foldy"
+        data-composition-src="compositions/frames/02-meet-foldy.html"
+        data-start="4.5"
+        data-duration="6.5"
+        data-track-index="1"
+      ></div>
+
+      <div
+        id="el-03-three-styles"
+        class="scene"
+        data-composition-id="03-three-styles"
+        data-composition-src="compositions/frames/03-three-styles.html"
+        data-start="10.5"
+        data-duration="6.5"
+        data-track-index="0"
+      ></div>
+
+      <div
+        id="el-04-follows-the-hinge"
+        class="scene"
+        data-composition-id="04-follows-the-hinge"
+        data-composition-src="compositions/frames/04-follows-the-hinge.html"
+        data-start="16.5"
+        data-duration="5.5"
+        data-track-index="1"
+      ></div>
+
+      <div
+        id="el-05-private-by-design"
+        class="scene"
+        data-composition-id="05-private-by-design"
+        data-composition-src="compositions/frames/05-private-by-design.html"
+        data-start="21.5"
+        data-duration="5.1"
+        data-track-index="0"
+      ></div>
+
+      <div
+        id="el-06-download-foldy"
+        class="scene"
+        data-composition-id="06-download-foldy"
+        data-composition-src="compositions/frames/06-download-foldy.html"
+        data-start="26"
+        data-duration="4.5"
+        data-track-index="1"
+      ></div>
+
+      <video id="meet-foldy-close-video" src="assets/macbook-close-silk.webm" preload="auto" muted playsinline
+        class="clip"
+        style="position:absolute;left:154px;top:120px;width:883px;height:565px;object-fit:fill"
+        data-start="6"
+        data-duration="3"
+        data-track-index="2003"
+      ></video>
+
+      <video id="f03-three-styles-close-silk" src="assets/macbook-close-silk.webm" preload="auto" muted playsinline
+        class="clip"
+        style="position:absolute;left:30px;top:330px;width:600px;height:384px;object-fit:contain"
+        data-start="12.3"
+        data-duration="3"
+        data-track-index="3010"
+      ></video>
+
+      <video id="f03-three-styles-close-shade" src="assets/macbook-close-shade.webm" preload="auto" muted playsinline
+        class="clip"
+        style="position:absolute;left:660px;top:330px;width:600px;height:384px;object-fit:contain"
+        data-start="12.3"
+        data-duration="3"
+        data-track-index="3011"
+      ></video>
+
+      <video id="f03-three-styles-close-frost" src="assets/macbook-close-frost.webm" preload="auto" muted playsinline
+        class="clip"
+        style="position:absolute;left:1290px;top:330px;width:600px;height:384px;object-fit:contain"
+        data-start="12.3"
+        data-duration="3"
+        data-track-index="3012"
+      ></video>
+
+      <video id="el-04-follows-the-hinge-video-3" src="assets/macbook-close-silk.webm" preload="auto" data-media-start="0" muted playsinline
+        class="clip"
+        style="position:absolute;left:422px;top:120px;width:1075px;height:688px;object-fit:contain"
+        data-start="17"
+        data-duration="3"
+        data-track-index="4002"
+      ></video>
+
+      <video id="el-04-follows-the-hinge-video-4" src="assets/macbook-open-silk.webm" preload="auto" data-media-start="0" muted playsinline
+        class="clip"
+        style="position:absolute;left:422px;top:120px;width:1075px;height:688px;object-fit:contain"
+        data-start="20"
+        data-duration="1.5"
+        data-track-index="4003"
+      ></video>
+
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+      // ── frame transitions (injected by transitions.mjs) ──
+      (function () { var tl = window.__timelines["main"];
+        tl.to("#el-01-close-the-lid", { filter: "blur(10px)", scale: 1.03, opacity: 0, duration: 0.6, ease: "power2.inOut" }, 4.5);
+        tl.fromTo("#el-02-meet-foldy", { filter: "blur(10px)", scale: 0.97, opacity: 0 }, { filter: "blur(0px)", scale: 1, opacity: 1, duration: 0.6, ease: "power2.inOut" }, 4.5);
+        tl.to("#el-02-meet-foldy", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 10.5);
+        tl.fromTo("#el-03-three-styles", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 10.5);
+        tl.to("#el-03-three-styles", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 16.5);
+        tl.fromTo("#el-04-follows-the-hinge", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 16.5);
+        tl.to("#el-04-follows-the-hinge", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 21.5);
+        tl.fromTo("#el-05-private-by-design", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 21.5);
+        tl.to("#el-05-private-by-design", { filter: "blur(10px)", scale: 1.03, opacity: 0, duration: 0.6, ease: "power2.inOut" }, 26);
+        tl.fromTo("#el-06-download-foldy", { filter: "blur(10px)", scale: 0.97, opacity: 0 }, { filter: "blur(0px)", scale: 1, opacity: 1, duration: 0.6, ease: "power2.inOut" }, 26);
+        tl.to({}, { duration: 30.5 }, 0); // full-span anchor — main.duration() == composition total (Studio master duration)
+      })();
+    </script>
+  </body>
+</html>

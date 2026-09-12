@@ -1,0 +1,10 @@
+# Apple's SF Pro, copied from the system by Scripts/video-assets.sh. Not ours to publish.
+assets/fonts/
+# Regenerable working state of the HyperFrames workflow.
+capture/
+snapshots/
+.hyperframes/frame-packets/
+node_modules/
+.transcode-cache/
+# Local HyperFrames preferences recorded during the brief.
+.media/

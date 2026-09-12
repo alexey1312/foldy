@@ -1,0 +1,305 @@
+<template>
+  <div
+    id="root"
+    data-composition-id="06-download-foldy"
+    data-width="1920"
+    data-height="1080"
+    data-start="0"
+    data-duration="4.5"
+  >
+    <style>
+      @font-face {
+        font-family: "SF Pro";
+        src: url("assets/fonts/SFNS.ttf") format("truetype");
+        font-weight: 1 1000;
+        font-display: block;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        container-type: size;
+        font-family: "SF Pro", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ── Ground: #ECEDF2 + the site's soft ambient washes ── */
+      [id="f06-download-foldy-ground"] {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 62% 70% at 8% 4%, rgba(104, 152, 255, 0.34) 0%, rgba(104, 152, 255, 0) 70%),
+          radial-gradient(ellipse 55% 62% at 94% 2%, rgba(255, 186, 150, 0.26) 0%, rgba(255, 186, 150, 0) 70%),
+          radial-gradient(ellipse 70% 55% at 50% 104%, rgba(132, 216, 209, 0.28) 0%, rgba(132, 216, 209, 0) 72%),
+          #ecedf2;
+      }
+
+      [id="f06-download-foldy-stage"] {
+        position: absolute;
+        inset: 0;
+      }
+
+      /* ── MacBook group (image is 1600×1024, visible lid+deck ≈ rows 285–970) ── */
+      [id="f06-download-foldy-mac"] {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 44px;
+        height: 541px;
+        display: flex;
+        justify-content: center;
+      }
+      [id="f06-download-foldy-mac-glow"] {
+        position: absolute;
+        left: 50%;
+        top: 452px;
+        width: 820px;
+        height: 110px;
+        margin-left: -410px;
+        border-radius: 50%;
+        background: radial-gradient(
+          ellipse 50% 50% at 50% 50%,
+          rgba(0, 98, 214, 0.55) 0%,
+          rgba(10, 132, 255, 0.22) 45%,
+          rgba(10, 132, 255, 0) 100%
+        );
+        filter: blur(28px);
+        z-index: 1;
+        opacity: 0;
+      }
+      [id="f06-download-foldy-mac-img"] {
+        position: relative;
+        width: 44cqw;
+        height: auto;
+        display: block;
+        z-index: 2;
+      }
+
+      /* ── Morph cell: "Foldy" and the CTA pill share one grid cell = one centre ── */
+      [id="f06-download-foldy-morph"] {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 596px;
+        height: 110px;
+        display: grid;
+        place-items: center;
+      }
+      [id="f06-download-foldy-word"],
+      [id="f06-download-foldy-cta"] {
+        grid-area: 1 / 1;
+        transform-origin: 50% 50%;
+      }
+      [id="f06-download-foldy-word"] {
+        font-size: 4.2cqw;
+        font-weight: 600;
+        line-height: 1.08;
+        letter-spacing: -0.02em;
+        color: #0d0e12;
+        white-space: nowrap;
+      }
+      [id="f06-download-foldy-cta"] {
+        position: relative;
+        display: grid;
+        place-items: center;
+      }
+      [id="f06-download-foldy-cta-glow"] {
+        position: absolute;
+        inset: -60px -90px;
+        border-radius: 100px;
+        background: radial-gradient(
+          ellipse 50% 50% at 50% 50%,
+          rgba(0, 98, 214, 0.7) 0%,
+          rgba(0, 98, 214, 0) 100%
+        );
+        filter: blur(30px);
+        z-index: 1;
+        opacity: 0;
+      }
+      [id="f06-download-foldy-pill"] {
+        position: relative;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 16px 16px 44px;
+        border-radius: 100px;
+        background: #0a84ff;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      [id="f06-download-foldy-pill-label"] {
+        position: relative;
+        z-index: 2;
+        font-size: 1.85cqw;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: #ffffff;
+        line-height: 1;
+      }
+      [id="f06-download-foldy-chip"] {
+        position: relative;
+        z-index: 2;
+        padding: 14px 26px;
+        border-radius: 100px;
+        background: rgba(0, 40, 110, 0.26);
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        font-size: 1.85cqw;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: #ffffff;
+        line-height: 1;
+      }
+      [id="f06-download-foldy-sheen"] {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 34%;
+        z-index: 3;
+        background: linear-gradient(
+          105deg,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(255, 255, 255, 0.95) 50%,
+          rgba(255, 255, 255, 0) 100%
+        );
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* ── Supporting lines ── */
+      [id="f06-download-foldy-url"] {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 736px;
+        text-align: center;
+        font-size: 1.8cqw;
+        font-weight: 500;
+        line-height: 1.3;
+        letter-spacing: -0.02em;
+        color: #0d0e12;
+      }
+      [id="f06-download-foldy-req"] {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 800px;
+        text-align: center;
+        font-size: 1.4cqw;
+        font-weight: 400;
+        line-height: 1.6;
+        color: #5d6270;
+      }
+    </style>
+
+    <!-- Full-bleed ground, lowest track -->
+    <div
+      id="f06-download-foldy-ground"
+      class="clip"
+      data-start="0"
+      data-duration="4.5"
+      data-track-index="0"
+    ></div>
+
+    <div
+      id="f06-download-foldy-stage"
+      class="clip"
+      data-start="0"
+      data-duration="4.5"
+      data-track-index="1"
+    >
+      <div id="f06-download-foldy-mac">
+        <div id="f06-download-foldy-mac-glow"></div>
+        <img
+          id="f06-download-foldy-mac-img"
+          src="assets/macbook-open-silk.png"
+          alt=""
+          width="1600"
+          height="1024"
+        />
+      </div>
+
+      <div id="f06-download-foldy-morph">
+        <div id="f06-download-foldy-word">Foldy</div>
+        <div id="f06-download-foldy-cta">
+          <div id="f06-download-foldy-cta-glow"></div>
+          <div id="f06-download-foldy-pill">
+            <span id="f06-download-foldy-pill-label">Download Foldy ·</span>
+            <span id="f06-download-foldy-chip">Free</span>
+            <div id="f06-download-foldy-sheen"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="f06-download-foldy-url">foldy.proteinunit.dev</div>
+      <div id="f06-download-foldy-req">macOS 14+ · Apple silicon MacBook</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        const q = (name) => document.querySelector('[id="f06-download-foldy-' + name + '"]');
+
+        const mac = q("mac");
+        const macGlow = q("mac-glow");
+        const word = q("word");
+        const cta = q("cta");
+        const ctaGlow = q("cta-glow");
+        const sheen = q("sheen");
+        const url = q("url");
+        const req = q("req");
+
+        const tl = gsap.timeline({ paused: true });
+
+        // ── Scene 1 (0.0–1.2s): MacBook rises into the upper-middle, glow under the deck; "Foldy" rises beneath.
+        tl.fromTo(mac, { y: 44, opacity: 0 }, { y: 0, opacity: 1, duration: 1.05, ease: "power3.out" }, 0);
+        tl.fromTo(
+          macGlow,
+          { opacity: 0, scale: 0.82 },
+          { opacity: 0.3, scale: 1, duration: 1.0, ease: "power2.out" },
+          0.1,
+        );
+        tl.fromTo(word, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, 0.35);
+
+        // Pill starts hidden at the shared centre until the morph.
+        tl.set(cta, { opacity: 0, scale: 0.55 }, 0);
+
+        // ── Scene 2 (1.2–2.2s): "Foldy" condenses at its own centre into the CTA pill (same-centre scale-swap).
+        tl.to(word, { scale: 0.55, opacity: 0, duration: 0.5, ease: "power2.in" }, 1.25);
+        tl.fromTo(
+          cta,
+          { scale: 0.55, opacity: 0 },
+          { scale: 1, opacity: 1, duration: 0.75, ease: "back.out(1.5)", immediateRender: false },
+          1.45,
+        );
+        // Hero bloom behind the pill lands on its settle (bloom-and-hold).
+        tl.fromTo(
+          ctaGlow,
+          { opacity: 0, scale: 0.85 },
+          { opacity: 0.22, scale: 1, duration: 0.75, ease: "power2.out", immediateRender: false },
+          1.45,
+        );
+
+        // ── Scene 3 (2.2–3.0s): the URL rises beneath the pill, then the requirements line.
+        tl.fromTo(url, { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: "power3.out" }, 2.2);
+        tl.fromTo(req, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 2.5);
+
+        // ── Scene 4 (3.0–4.5s): single-pass glass sheen across the pill, then a still hold to the last frame.
+        tl.fromTo(sheen, { xPercent: -120 }, { xPercent: 400, duration: 1.1, ease: "none" }, 3.05);
+        tl.fromTo(sheen, { opacity: 0 }, { opacity: 0.38, duration: 0.3, ease: "power1.out" }, 3.05);
+        tl.to(sheen, { opacity: 0, duration: 0.3, ease: "power1.in" }, 3.85);
+
+        // Pad the timeline to the full frame length (final hold).
+        tl.set({}, {}, 4.5);
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["06-download-foldy"] = tl;
+      })();
+    </script>
+  </div>
+</template>
