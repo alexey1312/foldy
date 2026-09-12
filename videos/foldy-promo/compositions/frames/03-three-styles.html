@@ -1,0 +1,204 @@
+<template>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    @font-face {
+      font-family: "SF Pro";
+      src: url("assets/fonts/SFNS.ttf") format("truetype");
+      font-weight: 1 1000;
+      font-display: block;
+    }
+
+    #root {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: "SF Pro", sans-serif;
+      color: #0d0e12;
+    }
+
+    /* Full-bleed ground: #ECEDF2 + the site's soft ambient washes */
+    .three-styles-ground {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      background: #ecedf2;
+    }
+    .three-styles-washes {
+      position: absolute;
+      left: -120px;
+      top: -80px;
+      width: 2160px;
+      height: 1240px;
+      background:
+        radial-gradient(ellipse 900px 700px at 18% 12%, rgba(104, 152, 255, 0.34), rgba(104, 152, 255, 0) 70%),
+        radial-gradient(ellipse 860px 640px at 86% 8%, rgba(255, 186, 150, 0.26), rgba(255, 186, 150, 0) 70%),
+        radial-gradient(ellipse 1300px 620px at 50% 104%, rgba(132, 216, 209, 0.28), rgba(132, 216, 209, 0) 72%);
+    }
+
+    .three-styles-headline {
+      position: absolute;
+      left: 0;
+      top: 150px;
+      width: 1920px;
+      margin: 0;
+      text-align: center;
+      font-family: "SF Pro", sans-serif;
+      font-size: 3.4cqw;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: #0d0e12;
+    }
+
+    /* Device boxes: 600x384 (1600x1024 at 0.375, aspect 1.5625), 30px even gutters */
+    .three-styles-device {
+      position: absolute;
+      top: 330px;
+      width: 600px;
+      height: 384px;
+      display: block;
+    }
+
+    .three-styles-pill-slot {
+      position: absolute;
+      top: 738px;
+      width: 600px;
+      height: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .three-styles-pill {
+      display: inline-block;
+      padding: 12px 34px 13px;
+      border-radius: 100px;
+      background: rgba(255, 255, 255, 0.62);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0 0 1px rgba(14, 18, 32, 0.06);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      font-family: "SF Pro", sans-serif;
+      font-size: 1.75cqw;
+      font-weight: 500;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      color: #0d0e12;
+      white-space: nowrap;
+    }
+
+    .three-styles-subline {
+      position: absolute;
+      left: 0;
+      top: 832px;
+      width: 1920px;
+      margin: 0;
+      text-align: center;
+      font-family: "SF Pro", sans-serif;
+      font-size: 1.65cqw;
+      font-weight: 400;
+      line-height: 1.4;
+      color: #5d6270;
+    }
+  </style>
+
+  <div id="root" data-composition-id="03-three-styles" data-width="1920" data-height="1080" data-duration="6.5">
+    <!-- Ground (lowest track, full duration) -->
+    <div id="f03-three-styles-ground" class="clip three-styles-ground" data-start="0" data-duration="6.5" data-track-index="0">
+      <div id="f03-three-styles-washes" class="three-styles-washes"></div>
+    </div>
+
+    <!-- Scene 1: headline -->
+    <h2 id="f03-three-styles-headline" class="three-styles-headline">Three styles.</h2>
+
+    <!-- Scene 2 pre-roll stills (same boxes as the videos) -->
+    <img id="f03-three-styles-open-silk" class="three-styles-device three-styles-open"
+      src="assets/macbook-open-silk.png" alt="" style="left: 30px" />
+    <img id="f03-three-styles-open-shade" class="three-styles-device three-styles-open"
+      src="assets/macbook-open-silk.png" alt="" style="left: 660px" />
+    <img id="f03-three-styles-open-frost" class="three-styles-device three-styles-open"
+      src="assets/macbook-open-silk.png" alt="" style="left: 1290px" />
+
+    <!-- Scene 3: the three folds (hoisted to host root; numeric geometry only) -->
+    <!-- approved frame video hoisted by assemble-index -->
+    <!-- approved frame video hoisted by assemble-index -->
+    <!-- approved frame video hoisted by assemble-index -->
+
+    <!-- Scene 4 post-roll stills (same boxes as the videos) -->
+    <img id="f03-three-styles-closed-silk" class="three-styles-device three-styles-closed"
+      src="assets/macbook-closed-silk.png" alt="" style="left: 30px" />
+    <img id="f03-three-styles-closed-shade" class="three-styles-device three-styles-closed"
+      src="assets/macbook-closed-shade.png" alt="" style="left: 660px" />
+    <img id="f03-three-styles-closed-frost" class="three-styles-device three-styles-closed"
+      src="assets/macbook-closed-frost.png" alt="" style="left: 1290px" />
+
+    <!-- Glass label pills, centred under each device -->
+    <div class="three-styles-pill-slot" style="left: 30px">
+      <span id="f03-three-styles-pill-silk" class="three-styles-pill">Silk</span>
+    </div>
+    <div class="three-styles-pill-slot" style="left: 660px">
+      <span id="f03-three-styles-pill-shade" class="three-styles-pill">Shade</span>
+    </div>
+    <div class="three-styles-pill-slot" style="left: 1290px">
+      <span id="f03-three-styles-pill-frost" class="three-styles-pill">Frost</span>
+    </div>
+
+    <!-- Scene 4: subline -->
+    <p id="f03-three-styles-subline" class="three-styles-subline">Perspective, blur, shadow and bend — on sliders.</p>
+  </div>
+
+  <script>
+    (function () {
+      window.__timelines = window.__timelines || {};
+      const q = (id) => document.getElementById("f03-three-styles-" + id);
+      const tl = gsap.timeline({ paused: true });
+
+      // Ambient ground drift under the whole shot (keeps the hold alive)
+      tl.fromTo(q("washes"), { x: -24, y: 0 }, { x: 24, y: -16, duration: 6, ease: "none" }, 0);
+
+      // Scene 1 (0.0–0.9s): "Three styles." rises in the upper band
+      tl.fromTo(q("headline"), { y: 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, 0.1);
+
+      // Scene 2 (0.9–1.8s): open stills assemble left-to-right into the triptych (short rises into slot)
+      const opens = [q("open-silk"), q("open-shade"), q("open-frost")];
+      opens.forEach((el, i) => {
+        tl.fromTo(el, { y: 44, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 0.9 + i * 0.15);
+      });
+      // Hand-over to the close videos at 1.8s: stills are in their exact boxes (arrived by 1.7s)
+      tl.set(opens, { opacity: 0 }, 1.8);
+
+      // Post-roll stills stay hidden until the videos end
+      const closeds = [q("closed-silk"), q("closed-shade"), q("closed-frost")];
+      tl.set(closeds, { opacity: 0 }, 0);
+
+      // Scene 3 (1.8–4.8s): glass pills fade up as each lid passes halfway
+      const pills = [
+        [q("pill-silk"), 2.6],
+        [q("pill-shade"), 2.9],
+        [q("pill-frost"), 3.2],
+      ];
+      pills.forEach(([el, at]) => {
+        tl.fromTo(el, { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power2.out" }, at);
+      });
+      // Frost becomes the active pill once all three are in
+      tl.fromTo(
+        q("pill-frost"),
+        { color: "#0D0E12", backgroundColor: "rgba(255, 255, 255, 0.62)" },
+        { color: "#0A84FF", backgroundColor: "rgba(255, 255, 255, 0.78)", duration: 0.35, ease: "power2.out", immediateRender: false },
+        3.6
+      );
+
+      // Scene 4 (4.8–6.0s): closed stills take over the same boxes; subline rises and holds
+      tl.set(closeds, { opacity: 1 }, 4.8);
+      tl.fromTo(q("subline"), { y: 26, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 4.9);
+
+      window.__timelines["03-three-styles"] = tl;
+    })();
+  </script>
+</template>

@@ -1,0 +1,307 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "SF Pro";
+      src: url("assets/fonts/SFNS.ttf") format("truetype");
+      font-weight: 1 1000;
+      font-display: block;
+    }
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: "SF Pro", sans-serif;
+      color: #0d0e12;
+    }
+
+    /* ── depth layer 1: light ground + ambient washes ── */
+    #meet-foldy-ground {
+      position: absolute;
+      inset: 0;
+      background: #ecedf2;
+      overflow: hidden;
+    }
+    #meet-foldy-wash-blue,
+    #meet-foldy-wash-peach,
+    #meet-foldy-wash-teal {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+    }
+    #meet-foldy-wash-blue {
+      left: -260px;
+      top: -320px;
+      width: 1150px;
+      height: 900px;
+      background: radial-gradient(closest-side, rgba(104, 152, 255, 0.34), rgba(104, 152, 255, 0));
+    }
+    #meet-foldy-wash-peach {
+      left: 1180px;
+      top: -300px;
+      width: 1000px;
+      height: 820px;
+      background: radial-gradient(closest-side, rgba(255, 186, 150, 0.26), rgba(255, 186, 150, 0));
+    }
+    #meet-foldy-wash-teal {
+      left: 420px;
+      top: 700px;
+      width: 1300px;
+      height: 760px;
+      background: radial-gradient(closest-side, rgba(132, 216, 209, 0.28), rgba(132, 216, 209, 0));
+    }
+
+    /* ── depth layer 2: MacBook + shadow ──
+       Every MacBook element is laid out at the FINAL box (x 154, y 120, 883×565) —
+       the exact geometry the hoisted video uses. The pre-roll's centred ~62% box
+       (x 365, y 100, 1190×762) is reached with a transform from origin 0 0. */
+    #meet-foldy-shadow-box,
+    #meet-foldy-open,
+    #meet-foldy-closed {
+      position: absolute;
+      left: 154px;
+      top: 120px;
+      width: 883px;
+      height: 565px;
+      transform-origin: 0 0;
+    }
+    #meet-foldy-open,
+    #meet-foldy-closed {
+      display: block;
+      object-fit: fill;
+    }
+    #meet-foldy-shadow {
+      position: absolute;
+      left: 9%;
+      top: 88%;
+      width: 82%;
+      height: 14%;
+      border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(24, 32, 56, 0.2), rgba(24, 32, 56, 0));
+      filter: blur(14px);
+    }
+
+    /* ── depth layer 3: type ── */
+    #meet-foldy-wordmark {
+      position: absolute;
+      left: 1100px;
+      top: 275px;
+      height: 6cqw;
+      margin: 0;
+      font-size: 6cqw;
+      line-height: 1;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      color: #0d0e12;
+      transform-origin: 50% 50%;
+    }
+    #meet-foldy-wordmark-inner {
+      display: block;
+    }
+
+    #meet-foldy-tagline {
+      position: absolute;
+      left: 1100px;
+      top: 420px;
+      width: 760px;
+      margin: 0;
+      font-size: 2.6cqw;
+      line-height: 1.1;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #0d0e12;
+    }
+    .meet-foldy-line-mask {
+      display: block;
+      overflow: hidden;
+      padding-bottom: 0.14em;
+      margin-bottom: -0.14em;
+    }
+    .meet-foldy-line {
+      display: block;
+      white-space: nowrap;
+    }
+
+    #meet-foldy-pill-wrap {
+      position: absolute;
+      left: 1100px;
+      top: 572px;
+    }
+    #meet-foldy-pill-halo {
+      position: absolute;
+      inset: -26px -34px;
+      border-radius: 100px;
+      background: radial-gradient(closest-side, rgba(0, 98, 214, 0.22), rgba(10, 132, 255, 0));
+      filter: blur(18px);
+    }
+    #meet-foldy-pill-glass {
+      position: absolute;
+      inset: 0;
+      border-radius: 100px;
+      background: rgba(255, 255, 255, 0.62);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.95),
+        0 0 0 1px rgba(14, 18, 32, 0.06);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      transform-origin: 0% 50%;
+    }
+    #meet-foldy-pill-text {
+      position: relative;
+      margin: 0;
+      padding: 20px 46px;
+      font-size: 1.4cqw;
+      line-height: 1.45;
+      font-weight: 400;
+      color: #5d6270;
+      white-space: nowrap;
+    }
+    #meet-foldy-pill-text span {
+      display: block;
+    }
+  </style>
+
+  <div id="root" data-composition-id="02-meet-foldy" data-width="1920" data-height="1080" data-duration="6.5">
+    <!-- layer 1: full-bleed light ground with ambient washes -->
+    <div
+      id="meet-foldy-ground"
+      class="clip"
+      data-start="0"
+      data-duration="6.5"
+      data-track-index="0"
+    >
+      <div id="meet-foldy-wash-blue"></div>
+      <div id="meet-foldy-wash-peach"></div>
+      <div id="meet-foldy-wash-teal"></div>
+    </div>
+
+    <!-- layer 2: soft glow shadow under the deck (travels with the MacBook) -->
+    <div id="meet-foldy-shadow-box">
+      <div id="meet-foldy-shadow"></div>
+    </div>
+
+    <!-- pre-roll still: open MacBook, centred then yielding into the final box -->
+    <img
+      id="meet-foldy-open"
+      class="clip"
+      src="assets/macbook-open-silk.png"
+      alt=""
+      data-start="0"
+      data-duration="1.5"
+      data-track-index="2"
+    />
+
+    <!-- the close: hoisted to the host root, same 883×565 box at (154, 120) -->
+    <!-- approved frame video hoisted by assemble-index -->
+
+    <!-- post-roll still: closed pose, identical box -->
+    <img
+      id="meet-foldy-closed"
+      class="clip"
+      src="assets/macbook-closed-silk.png"
+      alt=""
+      data-start="4.5"
+      data-duration="2"
+      data-track-index="4"
+    />
+
+    <!-- layer 3: type -->
+    <h1 id="meet-foldy-wordmark"><span id="meet-foldy-wordmark-inner">Foldy</span></h1>
+
+    <h2 id="meet-foldy-tagline">
+      <span class="meet-foldy-line-mask"><span class="meet-foldy-line">Your desktop bends</span></span>
+      <span class="meet-foldy-line-mask"><span class="meet-foldy-line">as you close the lid.</span></span>
+    </h2>
+
+    <div id="meet-foldy-pill-wrap">
+      <div id="meet-foldy-pill-halo"></div>
+      <div id="meet-foldy-pill-glass"></div>
+      <p id="meet-foldy-pill-text">
+        <span>The fluid fold from iPhone Duo —</span>
+        <span>for the MacBook you already have.</span>
+      </p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Pre-roll box (centred, ~62% width) expressed against the final box (154,120 · 883×565).
+      const PRE_SCALE = 1190 / 883;
+      const PRE_X = 365 - 154;
+      const PRE_Y = 100 - 120;
+
+      // ── Ambient washes: slow drift under the whole shot (keeps the ground alive) ──
+      tl.fromTo("#meet-foldy-wash-blue", { x: -30, y: -10 }, { x: 40, y: 20, duration: 6, ease: "sine.inOut" }, 0);
+      tl.fromTo("#meet-foldy-wash-peach", { x: 30, y: 0 }, { x: -40, y: 25, duration: 6, ease: "sine.inOut" }, 0);
+      tl.fromTo("#meet-foldy-wash-teal", { x: 0, y: 20 }, { x: -50, y: -15, duration: 6, ease: "sine.inOut" }, 0);
+
+      // ── Scene 1 (0.0–0.7): open MacBook centred at ~62%, still; "Foldy" fades up small above it ──
+      tl.set(["#meet-foldy-open", "#meet-foldy-shadow-box"], { x: PRE_X, y: PRE_Y, scale: PRE_SCALE }, 0);
+      // Wordmark travel wrapper: final centre (1100 + W/2, 332.6) → pre-roll centre (960, 250), scale 0.35.
+      tl.set("#meet-foldy-wordmark", { x: -140, xPercent: -50, y: -82.6, scale: 0.35 }, 0);
+      tl.fromTo(
+        "#meet-foldy-wordmark-inner",
+        { autoAlpha: 0, y: 18 },
+        { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" },
+        0.12,
+      );
+
+      // ── Scene 2 (0.7–1.5): the yield — one power3.inOut move into the final box ──
+      tl.fromTo(
+        ["#meet-foldy-open", "#meet-foldy-shadow-box"],
+        { x: PRE_X, y: PRE_Y, scale: PRE_SCALE },
+        { x: 0, y: 0, scale: 1, duration: 0.8, ease: "power3.inOut" },
+        0.7,
+      );
+      tl.fromTo(
+        "#meet-foldy-wordmark",
+        { x: -140, xPercent: -50, y: -82.6, scale: 0.35 },
+        { x: 0, xPercent: 0, y: 0, scale: 1, duration: 0.8, ease: "power3.inOut" },
+        0.7,
+      );
+
+      // ── Scene 3 (1.5–4.5): hoisted video plays in the same box; the open still hands over ──
+      // Tagline rises line by line beneath the wordmark at 2.3s.
+      tl.fromTo(
+        "#meet-foldy-tagline .meet-foldy-line",
+        { yPercent: 110 },
+        { yPercent: 0, duration: 0.85, ease: "power3.out", stagger: 0.12 },
+        2.3,
+      );
+
+      // ── Scene 4 (4.5–6.0): closed still holds the pose; glass pill scales open on X at 4.6s ──
+      tl.fromTo(
+        "#meet-foldy-pill-glass",
+        { scaleX: 0, autoAlpha: 0 },
+        { scaleX: 1, autoAlpha: 1, duration: 0.6, ease: "power3.out" },
+        4.6,
+      );
+      tl.fromTo(
+        "#meet-foldy-pill-text span",
+        { autoAlpha: 0, x: -14 },
+        { autoAlpha: 1, x: 0, duration: 0.5, ease: "power2.out", stagger: 0.08 },
+        4.85,
+      );
+      // Halo resolves a beat behind the silhouette, then holds (bloom-and-hold).
+      tl.fromTo(
+        "#meet-foldy-pill-halo",
+        { autoAlpha: 0, scale: 0.9 },
+        { autoAlpha: 0.4, scale: 1, duration: 0.7, ease: "power2.out" },
+        5.0,
+      );
+
+      // Pin the timeline to the frame's 6 s duration.
+      tl.set({}, {}, 6);
+
+      window.__timelines["02-meet-foldy"] = tl;
+    })();
+  </script>
+</template>

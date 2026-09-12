@@ -1,0 +1,184 @@
+<template>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    @font-face {
+      font-family: "SF Pro";
+      src: url("assets/fonts/SFNS.ttf") format("truetype");
+      font-weight: 1 1000;
+      font-display: block;
+    }
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: "SF Pro", sans-serif;
+    }
+
+    /* Ground clip, transparent: the fold media below it is full-bleed and carries its own black. */
+    [class~="01-close-the-lid-ground"] {
+      position: absolute;
+      inset: 0;
+      background: transparent; /* the fold media is full-bleed and carries its own black */
+    }
+
+    /* Stills share the video's exact host box: x=0 y=-168 1920x1248, fill. */
+    [class~="01-close-the-lid-still"] {
+      position: absolute;
+      left: 0;
+      top: -168px;
+      width: 1920px;
+      height: 1248px;
+      object-fit: fill;
+      display: block;
+    }
+
+    /* Type layer: positioned with a z-index so it paints above the hoisted host video.
+       #root deliberately carries no z-index / transform / opacity (no stacking context). */
+    [class~="01-close-the-lid-type"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 900px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    [class~="01-close-the-lid-line"] {
+      position: absolute;
+      left: 0;
+      width: 1920px;
+      text-align: center;
+      color: #fff;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.08;
+      white-space: nowrap;
+    }
+
+    [class~="01-close-the-lid-line1"] {
+      top: 175px;
+      font-size: 5.6cqw; /* ~108px */
+    }
+
+    [class~="01-close-the-lid-line2"] {
+      top: 318px;
+      font-size: 3.36cqw; /* 60% of line 1, ~65px */
+    }
+
+    [class~="01-close-the-lid-word"] {
+      display: inline-block;
+      will-change: transform, opacity, filter;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="01-close-the-lid"
+    data-width="1920"
+    data-height="1080" data-duration="5.1"
+  >
+    <!-- Track 0: ground, full duration (transparent, see above) -->
+    <div
+      id="f01-ground" class="clip 01-close-the-lid-ground"
+      data-start="0"
+      data-duration="5.1"
+      data-track-index="0"
+    ></div>
+
+    <!-- Track 1: flat desktop, pre-roll hold (runs 0.2s over the video's first frames) -->
+    <img
+      id="f01-still-1" class="clip 01-close-the-lid-still"
+      src="assets/desktop-flat.png"
+      alt=""
+      data-start="0"
+      data-duration="0.5"
+      data-track-index="1"
+    />
+
+    <!-- Track 2: folded sheet, post-roll hold (starts 0.1s before the video's last frame) -->
+    <img
+      id="f01-still-2" class="clip 01-close-the-lid-still"
+      src="assets/desktop-folded-silk.png"
+      alt=""
+      data-start="2.7"
+      data-duration="2.4"
+      data-track-index="2"
+    />
+
+    <!-- Track 3: the fold itself, hoisted to the host root at the same pixel box -->
+    <!-- approved frame video hoisted by assemble-index -->
+
+    <!-- Type layer (GSAP-driven, present for the whole frame) -->
+    <div class="01-close-the-lid-type">
+      <div class="01-close-the-lid-line 01-close-the-lid-line1">
+        <span class="01-close-the-lid-word 01-close-the-lid-w1">Close</span>
+        <span class="01-close-the-lid-word 01-close-the-lid-w1">the</span>
+        <span class="01-close-the-lid-word 01-close-the-lid-w1">lid.</span>
+      </div>
+      <div class="01-close-the-lid-line 01-close-the-lid-line2">
+        <span class="01-close-the-lid-word 01-close-the-lid-w2">Watch</span>
+        <span class="01-close-the-lid-word 01-close-the-lid-w2">the</span>
+        <span class="01-close-the-lid-word 01-close-the-lid-w2">desktop</span>
+        <span class="01-close-the-lid-word 01-close-the-lid-w2">bend.</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var ID = "01-close-the-lid";
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+
+      var scope = document.querySelector('[data-composition-id="' + ID + '"]') || document;
+      var q = function (cls) {
+        return Array.prototype.slice.call(scope.querySelectorAll('[class~="' + ID + "-" + cls + '"]'));
+      };
+            var line1 = q("w1");
+      var line2 = q("w2");
+
+      // Scene 1–2 (0.0–2.0s): no type. The flat desktop holds 0.3s, then the fold runs (0.3–2.8s);
+      // "Close the lid." rises word by word at 2.0s, once the fold has opened black space above the sheet.
+            tl.fromTo(
+        line1,
+        { opacity: 0, y: 46, filter: "blur(10px)" },
+        {
+          opacity: 1,
+          y: 0,
+          filter: "blur(0px)",
+          duration: 0.5,
+          ease: "power3.out",
+          stagger: 0.08
+        },
+        2.0
+      );
+
+      
+      // Scene 3 (2.8–4.5s): folded still holds; "Watch the desktop bend." rises in the
+      // black space the fold opened, at 60% of line 1, then holds to the cut.
+      tl.fromTo(
+        line2,
+        { opacity: 0, y: 30, filter: "blur(8px)" },
+        {
+          opacity: 1,
+          y: 0,
+          filter: "blur(0px)",
+          duration: 0.55,
+          ease: "power3.out",
+          stagger: 0.08
+        },
+        3.1
+      );
+
+      // Pin the timeline length to the frame duration (hold to the cut, no exit).
+      tl.set({}, {}, 4.5);
+
+      window.__timelines[ID] = tl;
+    })();
+  </script>
+</template>

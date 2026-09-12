@@ -1,0 +1,217 @@
+<template>
+  <div
+    id="root"
+    data-composition-id="05-private-by-design"
+    data-width="1920"
+    data-height="1080"
+    data-start="0"
+    data-duration="5.1"
+  >
+    <style>
+      @font-face {
+        font-family: "SF Pro";
+        src: url("assets/fonts/SFNS.ttf") format("truetype");
+        font-weight: 1 1000;
+        font-display: block;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        container-type: size;
+        font-family: "SF Pro", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ── Ground: #ECEDF2 + the site's soft ambient washes ── */
+      [id="f05-private-by-design-ground"] {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 62% 70% at 8% 4%, rgba(104, 152, 255, 0.34) 0%, rgba(104, 152, 255, 0) 70%),
+          radial-gradient(ellipse 55% 62% at 94% 2%, rgba(255, 186, 150, 0.26) 0%, rgba(255, 186, 150, 0) 70%),
+          radial-gradient(ellipse 70% 55% at 50% 104%, rgba(132, 216, 209, 0.28) 0%, rgba(132, 216, 209, 0) 72%),
+          #ecedf2;
+      }
+
+      [id="f05-private-by-design-stage"] {
+        position: absolute;
+        inset: 0;
+      }
+
+      /* ── Statement column: centred block, lines left-aligned inside it.
+         Row pitch 104px; row 0 is centred on y = 458 before any lift. ── */
+      [id="f05-private-by-design-stackwrap"] {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 406px;
+        display: flex;
+        justify-content: center;
+      }
+      [id="f05-private-by-design-stack"] {
+        display: grid;
+        grid-auto-rows: 104px;
+        justify-items: start;
+        align-items: center;
+      }
+      [data-role="f05-private-by-design-line"] {
+        font-size: 4.2cqw;
+        font-weight: 600;
+        line-height: 1.08;
+        letter-spacing: -0.02em;
+        color: #0d0e12;
+        white-space: nowrap;
+      }
+
+      /* ── Glass pill beneath the stack ── */
+      [id="f05-private-by-design-pillwrap"] {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 580px;
+        display: flex;
+        justify-content: center;
+      }
+      [id="f05-private-by-design-pill"] {
+        position: relative;
+        display: grid;
+        place-items: center;
+        padding: 22px 48px;
+      }
+      [id="f05-private-by-design-pill-glass"] {
+        position: absolute;
+        inset: 0;
+        border-radius: 100px;
+        background: rgba(255, 255, 255, 0.62);
+        border: 1px solid rgba(255, 255, 255, 0.95);
+        box-shadow: 0 0 0 1px rgba(14, 18, 32, 0.085);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        transform-origin: 50% 50%;
+      }
+      [id="f05-private-by-design-pill-label"] {
+        position: relative;
+        z-index: 2;
+        font-size: 1.6cqw;
+        font-weight: 500;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        color: #0d0e12;
+        white-space: nowrap;
+      }
+    </style>
+
+    <!-- Full-bleed ground, lowest track -->
+    <div
+      id="f05-private-by-design-ground"
+      class="clip"
+      data-start="0"
+      data-duration="5.1"
+      data-track-index="0"
+    ></div>
+
+    <div
+      id="f05-private-by-design-stage"
+      class="clip"
+      data-start="0"
+      data-duration="5.1"
+      data-track-index="1"
+    >
+      <div id="f05-private-by-design-stackwrap">
+        <div id="f05-private-by-design-stack">
+          <div id="f05-private-by-design-line0" data-role="f05-private-by-design-line">No account.</div>
+          <div id="f05-private-by-design-line1" data-role="f05-private-by-design-line">No license key.</div>
+          <div id="f05-private-by-design-line2" data-role="f05-private-by-design-line">No network code.</div>
+        </div>
+      </div>
+
+      <div id="f05-private-by-design-pillwrap">
+        <div id="f05-private-by-design-pill">
+          <div id="f05-private-by-design-pill-glass"></div>
+          <span id="f05-private-by-design-pill-label">Every frame stays on your Mac.</span>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        const q = (name) => document.querySelector('[id="f05-private-by-design-' + name + '"]');
+
+        const stack = q("stack");
+        const line0 = q("line0");
+        const line1 = q("line1");
+        const line2 = q("line2");
+        const glass = q("pill-glass");
+        const label = q("pill-label");
+
+        const TEXT = "#0d0e12";
+        const MUTED = "#5d6270";
+        const LIGHT = "#9a9a9a";
+        const PITCH = 104;
+
+        const tl = gsap.timeline({ paused: true });
+
+        // Entry: a line rises into the centre, soft-focus resolving sharp (text-scale blur peak 10px).
+        const rise = (el, at) =>
+          tl.fromTo(
+            el,
+            { y: 84, opacity: 0, filter: "blur(10px)" },
+            { y: 0, opacity: 1, filter: "blur(0px)", duration: 0.7, ease: "power3.out" },
+            at,
+          );
+
+        // Lift: the whole column moves up one row; the new line enters while the lift is at speed,
+        // so every line travels upward together across the seam (velocity-matched waterfall).
+        const lift = (fromRow, at) =>
+          tl.fromTo(
+            stack,
+            { y: -PITCH * fromRow },
+            { y: -PITCH * (fromRow + 1), duration: 0.72, ease: "power2.inOut", immediateRender: false },
+            at,
+          );
+
+        const dim = (el, from, to, at) =>
+          tl.fromTo(el, { color: from }, { color: to, duration: 0.55, ease: "power1.inOut", immediateRender: false }, at);
+
+        // ── Scene 1 (0.0–1.0s): ground with washes; "No account." rises into the centre.
+        tl.set(stack, { y: 0 }, 0);
+        rise(line0, 0.1);
+
+        // ── Scene 2 (1.0–2.0s): "No account." lifts and dims to text-muted; "No license key." rises in.
+        lift(0, 1.0);
+        dim(line0, TEXT, MUTED, 1.05);
+        rise(line1, 1.22);
+
+        // ── Scene 3 (2.0–3.0s): same relay; the column settles newest-darkest.
+        lift(1, 2.0);
+        dim(line1, TEXT, MUTED, 2.05);
+        dim(line0, MUTED, LIGHT, 2.05);
+        rise(line2, 2.22);
+
+        // ── Scene 4 (3.0–4.5s): glass pill scales open on X beneath the stack, label resolves, then still.
+        tl.fromTo(
+          glass,
+          { scaleX: 0.04, opacity: 0 },
+          { scaleX: 1, opacity: 1, duration: 0.6, ease: "expo.out" },
+          3.0,
+        );
+        tl.fromTo(
+          label,
+          { opacity: 0, filter: "blur(6px)" },
+          { opacity: 1, filter: "blur(0px)", duration: 0.45, ease: "power2.out" },
+          3.2,
+        );
+
+        // Pad to the full frame length (the breather holds still to the cut).
+        tl.set({}, {}, 4.5);
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["05-private-by-design"] = tl;
+      })();
+    </script>
+  </div>
+</template>

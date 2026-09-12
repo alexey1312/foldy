@@ -1,4 +1,4 @@
-.PHONY: build app run test snapshot shots icon clean
+.PHONY: build app run test snapshot shots icon video-assets video clean
 
 build:
 	swift build
@@ -33,6 +33,14 @@ shots: app
 
 icon:
 	Scripts/make-icon.sh
+
+# The 30 s promo in videos/foldy-promo (HyperFrames). Needs Node 22+ and ffmpeg.
+video-assets:
+	Scripts/video-assets.sh
+
+video: video-assets
+	cd videos/foldy-promo && npx --yes hyperframes@0.8.36 check
+	cd videos/foldy-promo && npx --yes hyperframes@0.8.36 render --quality high --output renders/video.mp4
 
 clean:
 	rm -rf .build build

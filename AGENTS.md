@@ -15,6 +15,7 @@ Scripts/bundle.sh debug     # same, debug
 make snapshot               # docs/snapshots/*.png via foldy-snapshot (no window needed)
 make shots                  # the window images in docs/ and site/settings.png
 make icon                   # Support/Foldy.icns from the preview scene
+make video                  # videos/foldy-promo: fold media via foldy-snapshot, then the MP4 (Node 22+, ffmpeg)
 ```
 
 Check UI without a lid or a Screen Recording grant (each run captures its own
@@ -70,6 +71,10 @@ grey — they are AppKit's and out of reach.
   field for field (floats and float4s only).
 - `site/index.html` ports the fold shader to WebGL 2. If the fold changes in
   Metal, change it there too.
+- The promo in `videos/foldy-promo` shows the fold only through clips that
+  `Scripts/video-assets.sh` renders with `foldy-snapshot`. After a fold change, `make video`.
+  Its `README.md` lists hand edits to `index.html` that re-running the HyperFrames
+  assembler would undo.
 
 ## Rules that came from bugs
 
