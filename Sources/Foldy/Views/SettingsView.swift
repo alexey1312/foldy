@@ -20,6 +20,9 @@ struct SettingsView: View {
     /// much so nothing sits under the traffic lights.
     static let titlebarHeight: CGFloat = 28
 
+    /// The window's size when it opens. `openSettings` sets it before centring.
+    static let idealSize = CGSize(width: 940, height: 760)
+
     var body: some View {
         NavigationSplitView(columnVisibility: .constant(.all)) {
             List(selection: $pane) {
@@ -32,12 +35,13 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.sidebar)
+            .background(SidebarCollapseLock())
             .safeAreaInset(edge: .top, spacing: 0) {
                 Color.clear.frame(height: Self.titlebarHeight)
             }
             // The split view hands itself a sidebar toggle. With no toolbar to hold it,
-            // it lands loose in the middle of the sidebar; and with three panes and no
-            // app menu to bring the sidebar back, there is nothing for it to do anyway.
+            // it lands loose in the middle of the sidebar; and with three panes and a
+            // sidebar that cannot collapse, there is nothing for it to do anyway.
             .toolbar(removing: .sidebarToggle)
             .navigationSplitViewColumnWidth(min: 190, ideal: 200, max: 240)
         } detail: {
@@ -62,7 +66,58 @@ struct SettingsView: View {
             }
             .background(.background)
         }
-        .frame(minWidth: 900, idealWidth: 940, minHeight: 700, idealHeight: 760)
+        .frame(minWidth: 900, idealWidth: Self.idealSize.width, minHeight: 700, idealHeight: Self.idealSize.height)
+    }
+}
+
+/// Keeps the Settings sidebar from collapsing.
+///
+/// Dragging the divider past the column's minimum width collapses a `NavigationSplitView`
+/// sidebar, and then nothing brings it back: the toggle is removed, Foldy has no View
+/// menu, and `columnVisibility` is a constant the split view ignores. SwiftUI has no
+/// modifier for a column that cannot collapse, so this finds the `NSSplitViewItem` the
+/// sidebar sits in and keeps `canCollapse` off; the divider then stops at the minimum
+/// width. Setting it once is not enough: SwiftUI turns it back on after the window is
+/// built and again on every pane change, so the lock watches the property. Should
+/// SwiftUI stop building the split view from an `NSSplitViewController`, the walk finds
+/// nothing and the sidebar is merely collapsible again.
+private struct SidebarCollapseLock: NSViewRepresentable {
+    func makeNSView(context: Context) -> LockView { LockView() }
+
+    func updateNSView(_ view: LockView, context: Context) {}
+
+    final class LockView: NSView {
+        private weak var item: NSSplitViewItem?
+        private var observation: NSKeyValueObservation?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            observation = nil
+            item = window == nil ? nil : sidebarItem()
+            guard let item else { return }
+            // `observe` is nonisolated; the item is only ever touched on the main thread,
+            // where SwiftUI makes its changes and the callback therefore runs.
+            nonisolated(unsafe) let observed = item
+            observation = observed.observe(\.canCollapse, options: [.initial]) { [weak self] _, _ in
+                MainActor.assumeIsolated { self?.hold() }
+            }
+        }
+
+        private func hold() {
+            if item?.canCollapse == true { item?.canCollapse = false }
+        }
+
+        /// It sits behind the list, and the clicks are the list's.
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        /// The split view's arranged subview is AppKit's wrapper around the item's view, not
+        /// the view itself, so the item is found by ancestry rather than identity.
+        private func sidebarItem() -> NSSplitViewItem? {
+            var ancestor = superview
+            while let view = ancestor, !(view is NSSplitView) { ancestor = view.superview }
+            guard let controller = (ancestor as? NSSplitView)?.delegate as? NSSplitViewController else { return nil }
+            return controller.splitViewItems.first { $0.viewController.isViewLoaded && isDescendant(of: $0.viewController.view) }
+        }
     }
 }
 

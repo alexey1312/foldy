@@ -326,9 +326,11 @@ final class AppController {
         // sidebar's material runs up behind the traffic lights.
         window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false
-        if let height {
-            window.setContentSize(NSSize(width: 940, height: height))
-        }
+        // Sized here rather than left to SwiftUI, which can hand over its view before it
+        // has measured it. `presentFront` centred that zero-size window, and SwiftUI then
+        // grew it down and to the right from the middle of the screen, half off the edge.
+        // Screenshot runs never saw it: they always passed a height.
+        window.setContentSize(NSSize(width: SettingsView.idealSize.width, height: height ?? SettingsView.idealSize.height))
         window.presentFront()
         let closer = WindowCloser { [weak self] in self?.settingsWindow = nil }
         window.delegate = closer
