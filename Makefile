@@ -1,4 +1,4 @@
-.PHONY: build app run test snapshot shots icon video-assets video clean
+.PHONY: build app run test snapshot shots icon video-assets video site-video clean
 
 build:
 	swift build
@@ -41,6 +41,13 @@ video-assets:
 video: video-assets
 	cd videos/foldy-promo && npx --yes hyperframes@0.8.36 check
 	cd videos/foldy-promo && npx --yes hyperframes@0.8.36 render --quality high --output renders/video.mp4
+	$(MAKE) site-video
+
+# The site serves site/ and nothing else, so the render has to be copied in to be seen.
+# The poster is the title shot at 8 s.
+site-video:
+	command cp -f videos/foldy-promo/renders/video.mp4 site/promo.mp4
+	ffmpeg -v error -y -ss 8 -i site/promo.mp4 -frames:v 1 -q:v 4 site/promo-poster.jpg
 
 clean:
 	rm -rf .build build

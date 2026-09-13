@@ -385,6 +385,12 @@
             mask-composite: exclude;
   }
   .caption { margin: 22px auto 0; max-width: 46ch; text-wrap: balance; text-align: center; color: var(--muted); font-size: 13.5px; letter-spacing: -0.005em; }
+  /* The promo. preload="none" and a poster: a visitor who never presses play
+     downloads a 46 KB still, not 7.7 MB of film. */
+  .film video {
+    display: block; width: 100%; height: auto; aspect-ratio: 16 / 9;
+    border-radius: clamp(12px, 1.8vw, 20px); background: #e9eaef;
+  }
   .shot { margin: 0 0 60px; padding: 0; }
   .shot img {
     display: block; width: min(643px, 100%); height: auto; margin: 0 auto; border-radius: 14px;
@@ -640,6 +646,15 @@
       </div>
     </div>
   </section>
+
+  <!-- Below the demos, not above them: the first MacBook folds by window.scrollY, so
+       anything taller in front of it would move where the fold happens. -->
+  <figure class="figure film">
+    <div class="tray">
+      <video src="promo.mp4" poster="promo-poster.jpg" width="1920" height="1080" controls playsinline preload="none" aria-label="Foldy in 30 seconds: the desktop folds as the lid closes, in the Silk, Shade and Frost styles, following the real hinge angle, with no account and no network code."></video>
+    </div>
+    <figcaption class="caption">Foldy in 30 seconds. Every fold in it is the app's own shader, rendered frame by frame.</figcaption>
+  </figure>
 
   <figure class="shot">
     <img src="settings.png" width="940" height="820" alt="Foldy's Appearance settings: a live MacBook preview, a drag-to-open slider, Silk, Shade and Frost styles, and perspective, blur, shadow and bend controls." loading="lazy">

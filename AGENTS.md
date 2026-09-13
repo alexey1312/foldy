@@ -15,7 +15,7 @@ Scripts/bundle.sh debug     # same, debug
 make snapshot               # docs/snapshots/*.png via foldy-snapshot (no window needed)
 make shots                  # the window images in docs/ and site/settings.png
 make icon                   # Support/Foldy.icns from the preview scene
-make video                  # videos/foldy-promo: fold media via foldy-snapshot, then the MP4 (Node 22+, ffmpeg)
+make video                  # videos/foldy-promo: fold media via foldy-snapshot, the MP4, its copy on the site (Node 22+, ffmpeg)
 ```
 
 Check UI without a lid or a Screen Recording grant (each run captures its own
@@ -73,6 +73,9 @@ grey — they are AppKit's and out of reach.
   Metal, change it there too.
 - The promo in `videos/foldy-promo` shows the fold only through clips that
   `Scripts/video-assets.sh` renders with `foldy-snapshot`. After a fold change, `make video`.
+  The site plays `site/promo.mp4`, a copy: Pages publishes `site/` only, and the render in
+  `renders/` was on no page at all until it was copied in. `make video` refreshes the copy
+  and its poster; after a render made any other way, `make site-video`.
   Its `README.md` lists hand edits to `index.html` that re-running the HyperFrames
   assembler would undo.
 
