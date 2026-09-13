@@ -2,7 +2,8 @@
 
 A 30.5 s silent promo, 1920×1080, built with [HyperFrames](https://github.com/heygen-com/hyperframes):
 HTML compositions rendered frame by frame in headless Chrome. The result is
-[`renders/video.mp4`](renders/video.mp4).
+[`renders/video.mp4`](renders/video.mp4), which the site plays from its own copy,
+`site/promo.mp4` (`make site-video`; `make video` does it for you).
 
 ```bash
 make video          # from the repo root: render the fold media, check, render the MP4
