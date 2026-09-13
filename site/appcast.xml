@@ -3,6 +3,16 @@
     <channel>
         <title>Foldy</title>
         <item>
+            <title>0.1.8</title>
+            <pubDate>Sun, 13 Sep 2026 13:16:20 +0000</pubDate>
+            <link>https://foldy.proteinunit.dev/</link>
+            <sparkle:version>108</sparkle:version>
+            <sparkle:shortVersionString>0.1.8</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://github.com/alexey1312/foldy/releases/download/v0.1.8/Foldy-0.1.8.zip" length="1957546" type="application/octet-stream" sparkle:edSignature="tMkv+pxiqj9py93oD/XLVM3zRyCutGk2Hk1lKUuJMPkpdjdT82xdmvM1YXXqVfs270vYI40NDmOSu+S1V/rCAg=="/>
+        </item>
+        <item>
             <title>0.1.7</title>
             <pubDate>Fri, 11 Sep 2026 17:47:39 +0000</pubDate>
             <link>https://foldy.proteinunit.dev/</link>
