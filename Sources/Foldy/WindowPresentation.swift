@@ -28,7 +28,9 @@ extension NSWindow {
     /// screen AppKit thinks is main. With the pointer over no screen at all it falls back
     /// to `NSScreen.main`. The clamp is not decorative: `--window-height` can ask for a
     /// window taller than the visible frame, and a window is pinned inside it rather than
-    /// centred when that happens.
+    /// centred when that happens. It centres the size the window has now, so give a window
+    /// made around a SwiftUI view its content size first: the view may not be measured yet,
+    /// and a zero-size window centred and then grown hangs off the bottom right.
     func centerOnActiveScreen() {
         let mouse = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main ?? NSScreen.screens.first

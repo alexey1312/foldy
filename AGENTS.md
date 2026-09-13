@@ -98,7 +98,10 @@ grey — they are AppKit's and out of reach.
   to come up in front: `NSWindow.presentFront()` (`Views`-free, in
   `Foldy/WindowPresentation.swift`) raises it to `.floating`, orders it front
   regardless, and drops back to `.normal` on the next main-actor hop. Use it, and its
-  `centerOnActiveScreen()`, rather than `center()`. Windows get a `WindowCloser`
+  `centerOnActiveScreen()`, rather than `center()`. Set the content size before
+  `presentFront()`: the hosting controller can hand over a view it has not measured, and
+  Settings opened from the menu was centred at zero size, then grew off the bottom right.
+  The screenshot switches always passed a height and never showed it. Windows get a `WindowCloser`
   delegate too: both were kept alive after closing, and the Settings pane's previews
   keep redrawing at the sensor's report rate while they live.
 - Errors go to `FoldyLog` (`os.Logger`, subsystem `app.foldy`) as well as to the status
@@ -127,11 +130,15 @@ grey — they are AppKit's and out of reach.
   the other way round the preference is swallowed and the column collapses.
 - The split view hands itself a sidebar toggle. With no toolbar to hold it, it lands
   loose in the middle of the sidebar — `.toolbar(removing: .sidebarToggle)` on the
-  sidebar content.
+  sidebar content. With the toggle gone, a sidebar dragged shut had no way back, and
+  `columnVisibility: .constant(.all)` does not stop the drag. `SidebarCollapseLock` holds
+  the sidebar's `NSSplitViewItem.canCollapse` off, and watches it, because SwiftUI turns it
+  back on after the window is built and on every pane change.
 - `Scripts/bundle.sh`: the signing identity has spaces; it goes through the
   `sign` function, never an unquoted variable. Sparkle's XPC services,
   `Autoupdate` and `Updater.app` are signed before the framework, then the app.
-- The user's shell aliases `cp` to `cp -i`; scripts use `command cp -f`.
+- The user's shell aliases `cp` to `cp -i` and `rm` to `rm -i`; scripts use `command cp -f`
+  and `command rm -f`, or a non-interactive run hangs on the prompt.
 
 ## Releases
 
