@@ -11,6 +11,8 @@ Foldy is an open, from-scratch re-creation of [Bendy](https://trybendy.app/):
 a menu bar app for macOS, written in Swift with SwiftUI, Metal, ScreenCaptureKit
 and IOKit. No account, no license key, no network code.
 
+**Project page:** [blog.kakoulin.com/apps/foldy](https://blog.kakoulin.com/apps/foldy)
+
 | The fold on the real display | Settings, with the lid control in glass over the preview |
 | --- | --- |
 | ![The desktop folded over the lid](docs/fold-overlay.png) | ![Appearance settings](docs/settings-appearance.png) |
